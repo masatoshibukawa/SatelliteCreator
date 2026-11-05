@@ -29,6 +29,12 @@ uv run pytest
 
 画面には Node 18.18 以上が必要です。`scripts/dev.sh` は `~/.local/opt/node22/bin` の Node を使います。別の場所の Node を使うときは、`SATELLITECREATOR_NODE_BIN` にその `bin` を指定してください。
 
+設計結果をロケット側へ渡す `launch_request.json` は、画面の保存ボタンか次のコマンドで出力します。実例は `examples/opt_cube/` にあります。
+
+```bash
+uv run python -m satellitecreator.launch_request --prompt "$(cat examples/opt_cube/request.txt)" --name OPT-CUBE --output launch_request.json
+```
+
 API は認証なしで動くため、ローカルでの利用を前提に `127.0.0.1` に限定しています。
 
 ## English summary
