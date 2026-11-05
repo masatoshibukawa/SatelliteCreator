@@ -8,9 +8,16 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+from satellitecreator.catalog import load_reference_buses
 from satellitecreator.core.ledger import Ledger
 from satellitecreator.core.registry import load_constants, load_equations
-from satellitecreator.design import check_scope, envelope, form_factor, load_scope_limits
+from satellitecreator.design import (
+    check_scope,
+    envelope,
+    form_factor,
+    load_launch_vehicle,
+    load_scope_limits,
+)
 from satellitecreator.process import load_review_specs
 from satellitecreator.project import Project, SuccessLevel
 from satellitecreator.requirements import Function, RequirementLevel, RequirementStatus
@@ -54,6 +61,15 @@ _SOURCE_TITLES = {
         "NASA, Introduction to Orbital Mechanics and Spacecraft Attitudes for Thermal Engineers"
     ),
     "https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html": "NASA Earth Fact Sheet",
+    "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-310A.pdf": "JERG-2-310A 熱制御系設計標準",
+    "https://physics.nist.gov/cgi-bin/cuu/Value?sigma": "NIST, Stefan-Boltzmann constant",
+    "https://tfaws.nasa.gov/wp-content/uploads/On-Orbit_Thermal_Environments_TFAWS_2014.pdf": (
+        "NASA TFAWS, Introduction to On-Orbit Thermal Environments"
+    ),
+    "https://www.satcon.jp/history/prize22/pdf/22_asj.pdf": "OPT-CUBE 解析書（第22回）",
+    "https://www.preprints.org/manuscript/202404.0391": (
+        "Okuyama, 超小型衛星の固有振動数に関する論文（H-IIA の要求を引用）"
+    ),
     "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JMR-003E.pdf": "JMR-003E スペースデブリ発生防止標準",
     "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-100.pdf": "JERG-2-100 システム設計標準",
 }
@@ -123,7 +139,12 @@ def _analysis_section(ledger: Ledger) -> Section:
     )
     if not lines:
         return _pending("2", title, "軌道が決まると記載されます")
-    note = "円軌道で、日陰は太陽が軌道面にある最悪の場合です。電力と回線の解析は未計算です"
+    stand_in = (
+        "質量と熱は OPT-CUBE の機器構成を目安にした暫定値です。"
+        if (ledger.get("total_mass_kg"))
+        else ""
+    )
+    note = f"円軌道を仮定しています。{stand_in}電力と回線の解析は未計算です"
     return Section(
         number="2", title=title, state=SectionState.PARTIAL, lines=lines, pending_note=note
     )
@@ -172,8 +193,14 @@ def _launch_section(project: Project) -> Section:
     if project.design is None:
         return _pending("5.2", title, "大きさと軌道が決まると記載されます")
     max_mass_kg = form_factor(project.design.form_factor).max_mass_kg
-    lines = (f"CubeSat 放出ポッドを使う場合の質量上限: {max_mass_kg:g} kg",)
-    note = "打上げロケットの選定と機械環境条件は未検討です"
+    vehicle = load_launch_vehicle()
+    lines = (
+        f"CubeSat 放出ポッドを使う場合の質量上限: {max_mass_kg:g} kg",
+        f"基準のロケット: {vehicle.name}",
+        f"固有振動数の要求: 機軸方向 {vehicle.longitudinal_frequency_hz:g} Hz 以上、"
+        f"機軸直交方向 {vehicle.lateral_frequency_hz:g} Hz 以上",
+    )
+    note = "ロケットの選定理由と機械環境条件の詳細は未検討です"
     return Section(
         number="5.2", title=title, state=SectionState.PARTIAL, lines=lines, pending_note=note
     )
@@ -215,7 +242,9 @@ def _references() -> tuple[Reference, ...]:
         *(item.source for item in limits.form_factors),
         *(item.source for item in limits.envelopes),
         limits.leo_max_altitude.source,
+        load_launch_vehicle().source,
         *(item.source for item in load_review_specs()),
+        *(item.source for item in load_reference_buses()),
         *(item.source for item in load_constants()),
         *(item.source for item in load_equations()),
     )
@@ -252,24 +281,28 @@ def _sections(
     )
 
 
-def _checklist(project: Project) -> tuple[ChecklistItem, ...]:
+def _checklist(project: Project, ledger: Ledger) -> tuple[ChecklistItem, ...]:
     design_known = SectionState.PARTIAL if project.design else SectionState.PENDING
+    mass_known = SectionState.PARTIAL if ledger.get("total_mass_kg") else SectionState.PENDING
+    thermal_known = (
+        SectionState.PARTIAL if ledger.get("temperature_margin_k") else SectionState.PENDING
+    )
     operations_known = SectionState.PARTIAL if project.operations_concept else SectionState.PENDING
     pending = SectionState.PENDING
     items = (
         ("打上げ時および軌道上の衛星形状", design_known),
         ("システムブロックダイアグラム", pending),
-        ("搭載機器一覧（質量や寸法を含む）", pending),
-        ("質量特性（全質量、慣性モーメントなど）", pending),
+        ("搭載機器一覧（質量や寸法を含む）", mass_known),
+        ("質量特性（全質量、慣性モーメントなど）", mass_known),
         ("軌道およびその設定根拠", pending),
         ("運用シーケンス", operations_known),
         ("姿勢プロファイル", pending),
         ("データ処理の流れと回線設計結果", pending),
         ("姿勢制御が可能であること", pending),
         ("軌道制御が可能であること", pending),
-        ("搭載機器の温度余裕", pending),
+        ("搭載機器の温度余裕", thermal_known),
         ("電力プロファイルとバッテリ容量", pending),
-        ("打上げロケットとのインターフェース条件", pending),
+        ("打上げロケットとのインターフェース条件", design_known),
     )
     return tuple(
         ChecklistItem(number=number, label=label, state=state)
@@ -304,8 +337,9 @@ def _to_markdown(
 
 def build_document(project: Project) -> Document:
     references = _references()
-    sections = _sections(project, project_ledger(project), references)
-    checklist = _checklist(project)
+    ledger = project_ledger(project)
+    sections = _sections(project, ledger, references)
+    checklist = _checklist(project, ledger)
     return Document(
         title=project.name,
         sections=sections,

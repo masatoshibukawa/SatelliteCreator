@@ -7,7 +7,7 @@ value by construction. Anything that cannot be computed yet is listed as missing
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from enum import StrEnum
 
 from satellitecreator.core.formulas import FORMULAS
@@ -50,7 +50,9 @@ class Ledger(Frozen):
         return None if entry is None else entry.value
 
 
-def _input_entries(inputs: Mapping[str, float]) -> dict[str, LedgerEntry]:
+def _input_entries(
+    inputs: Mapping[str, float], provisional: Collection[str]
+) -> dict[str, LedgerEntry]:
     labels = {item.key: item.label for item in load_inputs()}
     unknown = sorted(set(inputs) - set(labels))
     if unknown:
@@ -59,7 +61,13 @@ def _input_entries(inputs: Mapping[str, float]) -> dict[str, LedgerEntry]:
     if not_finite:
         raise ValueError(f"input must be finite: {not_finite}")
     return {
-        key: LedgerEntry(key=key, label=labels[key], value=value, origin=Origin.INPUT)
+        key: LedgerEntry(
+            key=key,
+            label=labels[key],
+            value=value,
+            origin=Origin.INPUT,
+            provisional=key in provisional,
+        )
         for key, value in inputs.items()
     }
 
@@ -97,8 +105,9 @@ def _evaluate(equation: Equation, known: Mapping[str, LedgerEntry]) -> LedgerEnt
     )
 
 
-def solve(inputs: Mapping[str, float]) -> Ledger:
-    known = {**_constant_entries(), **_input_entries(inputs)}
+def solve(inputs: Mapping[str, float], provisional: Collection[str] = ()) -> Ledger:
+    """`provisional` names stand-in inputs. Everything derived from them inherits the mark."""
+    known = {**_constant_entries(), **_input_entries(inputs, provisional)}
     pending = load_equations()
     while True:
         ready = tuple(item for item in pending if all(key in known for key in item.inputs))

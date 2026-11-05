@@ -3,6 +3,7 @@ import math
 import pytest
 from pydantic import ValidationError
 
+from satellitecreator.core import checks as checks_module
 from satellitecreator.core import ledger as ledger_module
 from satellitecreator.core.checks import CheckState, evaluate_checks
 from satellitecreator.core.formulas import FORMULAS
@@ -219,6 +220,14 @@ def test_input_cannot_overwrite_a_calculated_quantity():
         solve({"orbit_period_s": 1.0})
 
 
+def test_provisional_input_is_marked_and_passed_on():
+    ledger = solve({"parts_mass_kg": 3.9, "mass_margin_kg": 0.1}, provisional={"parts_mass_kg"})
+
+    assert ledger.get("parts_mass_kg").provisional
+    assert not ledger.get("mass_margin_kg").provisional
+    assert ledger.get("total_mass_kg").provisional
+
+
 def test_input_must_be_finite():
     with pytest.raises(ValueError, match="finite"):
         solve({"altitude_m": math.inf})
@@ -248,8 +257,8 @@ def test_not_run_check_names_what_is_missing():
 
 
 def test_check_passes_and_fails_on_the_ledger_values():
-    passing = solve({"max_mass_kg": 4.5, "total_mass_kg": 4.0})
-    failing = solve({"max_mass_kg": 4.5, "total_mass_kg": 5.0})
+    passing = solve({"max_mass_kg": 4.5, "parts_mass_kg": 3.9, "mass_margin_kg": 0.1})
+    failing = solve({"max_mass_kg": 4.5, "parts_mass_kg": 4.9, "mass_margin_kg": 0.1})
 
     assert _check_state("mass_within_limit", passing) is CheckState.PASSED
     assert _check_state("mass_within_limit", failing) is CheckState.FAILED
@@ -275,19 +284,47 @@ def test_negative_link_margin_fails():
     )
 
 
-def test_heat_must_match_the_consumed_power():
-    matching = _ledger_with(heat_load_w=5.0, consumed_power_w=5.0)
-    differing = _ledger_with(heat_load_w=5.0, consumed_power_w=6.0)
+def test_equality_check_compares_within_rounding(monkeypatch):
+    spec = CheckSpec(
+        id="same",
+        label="same",
+        block=Block.MASS,
+        left="a_kg",
+        comparator=Comparator.EQUAL,
+        right="b_kg",
+        source=SOURCE,
+    )
+    monkeypatch.setattr(checks_module, "load_checks", lambda: (spec,))
 
-    assert _check_state("heat_matches_power", matching) is CheckState.PASSED
-    assert _check_state("heat_matches_power", differing) is CheckState.FAILED
+    assert _check_state("same", _ledger_with(a_kg=1.0, b_kg=1.0 + 1e-12)) is CheckState.PASSED
+    assert _check_state("same", _ledger_with(a_kg=1.0, b_kg=1.1)) is CheckState.FAILED
 
 
 def test_provisional_check_says_so_in_its_result():
     results = {item.id: item for item in evaluate_checks(_ledger_with())}
 
-    assert results["heat_matches_power"].provisional
+    assert results["orbit_lifetime_covers_mission"].provisional
     assert not results["link_margin_positive"].provisional
+
+
+def test_check_that_reads_a_stand_in_value_is_marked_provisional():
+    ledger = solve(
+        {"max_mass_kg": 4.5, "parts_mass_kg": 3.9, "mass_margin_kg": 0.1},
+        provisional={"parts_mass_kg"},
+    )
+
+    result = next(item for item in evaluate_checks(ledger) if item.id == "mass_within_limit")
+
+    assert result.state is CheckState.PASSED
+    assert result.provisional
+
+
+def test_check_on_firm_values_is_not_marked_provisional():
+    ledger = solve({"max_mass_kg": 4.5, "parts_mass_kg": 3.9, "mass_margin_kg": 0.1})
+
+    result = next(item for item in evaluate_checks(ledger) if item.id == "mass_within_limit")
+
+    assert not result.provisional
 
 
 def test_check_needs_exactly_one_right_side():

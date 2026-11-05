@@ -45,6 +45,8 @@ class Equation(Sourced):
     inputs: tuple[str, ...]
     block: Block
     display_divisor: float = Field(default=1.0, gt=0)
+    display_offset: float = 0.0
+    display_digits: int = Field(default=1, ge=0)
     display_unit: str = ""
     summary: bool = False
 

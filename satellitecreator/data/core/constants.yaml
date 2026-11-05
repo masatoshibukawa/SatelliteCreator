@@ -9,3 +9,42 @@ constants:
     value: 3.9860e14
     source: https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
     section: GM
+  - key: solar_flux_wm2
+    label: 太陽定数
+    value: 1366
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-310A.pdf
+    section: (1) 太陽定数
+  - key: albedo_high_ratio
+    label: 地球アルベドの上側
+    value: 0.40
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-310A.pdf
+    section: 表 5.1.4（時定数 0.3 から 3 時間の行）
+  - key: albedo_low_ratio
+    label: 地球アルベドの下側
+    value: 0.20
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-310A.pdf
+    section: 表 5.1.4（時定数 0.3 から 3 時間の行）
+  - key: earth_ir_high_wm2
+    label: 地球赤外放射の上側
+    value: 261
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-310A.pdf
+    section: 表 5.1.4（時定数 0.3 から 3 時間の行）
+  - key: earth_ir_low_wm2
+    label: 地球赤外放射の下側
+    value: 189
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-310A.pdf
+    section: 表 5.1.4（時定数 0.3 から 3 時間の行）
+  - key: earth_obliquity_deg
+    label: 地軸の傾き
+    value: 23.45
+    source: https://ntrs.nasa.gov/api/citations/20205003902/downloads/Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf
+    section: p. 140
+  - key: stefan_boltzmann_wm2k4
+    label: ステファン・ボルツマン定数
+    value: 5.670374419e-8
+    source: https://physics.nist.gov/cgi-bin/cuu/Value?sigma
+  - key: specific_heat_jpkgk
+    label: 衛星全体の比熱
+    value: 900
+    provisional: true
+    notes: Stand-in close to aluminium, which is the main structural material.

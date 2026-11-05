@@ -82,6 +82,16 @@ def test_mission_analysis_shows_the_calculated_orbit_with_its_equation():
     assert "未計算" in section.pending_note or "電力" in section.pending_note
 
 
+def test_stand_in_note_appears_only_when_mass_and_thermal_were_calculated():
+    prompt = "高度 500 km、傾斜角 97 度の 6U 衛星"
+
+    with_bus = _section(build_document(build_intake(PROMPT, {}).project), "2")
+    without_bus = _section(build_document(build_intake(prompt, {}).project), "2")
+
+    assert "OPT-CUBE" in with_bus.pending_note
+    assert "OPT-CUBE" not in without_bus.pending_note
+
+
 def test_mission_analysis_is_pending_without_an_orbit():
     document = build_document(build_intake("光通信を実証したい", {}).project)
 
@@ -134,8 +144,17 @@ def test_checklist_marks_only_what_the_project_actually_has():
     document = build_document(build_intake(PROMPT, {}).project)
 
     assert _item(document, 1).state is SectionState.PARTIAL
-    assert _item(document, 11).state is SectionState.PENDING
     assert _item(document, 12).state is SectionState.PENDING
+
+
+def test_checklist_credits_mass_and_temperature_only_when_they_are_calculated():
+    calculated = build_document(build_intake(PROMPT, {}).project)
+    prompt = "高度 500 km、傾斜角 97 度の 6U 衛星"
+    not_calculated = build_document(build_intake(prompt, {}).project)
+
+    for number in (3, 4, 11):
+        assert _item(calculated, number).state is SectionState.PARTIAL
+        assert _item(not_calculated, number).state is SectionState.PENDING
 
 
 def test_checklist_does_not_credit_a_stated_orbit_as_a_rationale():
@@ -144,10 +163,15 @@ def test_checklist_does_not_credit_a_stated_orbit_as_a_rationale():
     assert _item(document, 5).state is SectionState.PENDING
 
 
-def test_checklist_does_not_credit_a_mass_limit_as_a_launch_interface():
+def test_launch_section_states_the_baseline_vehicle_and_its_requirement():
     document = build_document(build_intake(PROMPT, {}).project)
 
-    assert _item(document, 13).state is SectionState.PENDING
+    text = "\n".join(_section(document, "5.2").lines)
+
+    assert "H-IIA" in text
+    assert "100 Hz" in text
+    assert "50 Hz" in text
+    assert _item(document, 13).state is SectionState.PARTIAL
 
 
 def test_subsystem_section_labels_its_lines_as_requirements_not_results():
@@ -165,6 +189,15 @@ def test_orbit_outside_the_scope_is_flagged_in_the_system_section():
     document = build_document(build_intake(prompt, {}).project)
 
     assert "範囲外" in _section(document, "5.1").pending_note
+
+
+def test_mission_analysis_shows_mass_and_temperature_marked_provisional():
+    document = build_document(build_intake(PROMPT, {}).project)
+
+    lines = _section(document, "2").lines
+
+    assert any(line.startswith("総質量: 3.98 kg（暫定）") for line in lines)
+    assert any(line.startswith("周回の最高温度") and "（暫定）" in line for line in lines)
 
 
 def test_references_list_the_sources_of_the_values_used():

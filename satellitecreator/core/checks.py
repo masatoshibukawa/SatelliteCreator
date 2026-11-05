@@ -40,13 +40,15 @@ def _holds(left: float, comparator: Comparator, right: float) -> bool:
 
 
 def _evaluate(spec: CheckSpec, ledger: Ledger) -> CheckResult:
+    keys = (spec.left,) if spec.right is None else (spec.left, spec.right)
+    entries = tuple(ledger.get(key) for key in keys)
     common = {
         "id": spec.id,
         "label": spec.label,
         "block": spec.block,
-        "provisional": spec.provisional,
+        "provisional": spec.provisional
+        or any(item.provisional for item in entries if item is not None),
     }
-    keys = (spec.left,) if spec.right is None else (spec.left, spec.right)
     missing = tuple(key for key in keys if ledger.value(key) is None)
     if missing:
         return CheckResult(state=CheckState.NOT_RUN, missing=missing, **common)

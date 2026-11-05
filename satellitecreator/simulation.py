@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+from satellitecreator.catalog import ReferenceBus, reference_bus
 from satellitecreator.core.ledger import Ledger, LedgerEntry, solve
 from satellitecreator.core.registry import Block, Equation, load_equations
-from satellitecreator.design import form_factor
+from satellitecreator.design import envelope, form_factor, load_launch_vehicle
 from satellitecreator.project import Project
 from satellitecreator.schema import Frozen
 
@@ -18,7 +19,16 @@ _BLOCK_LABELS = {
     Block.COMMUNICATION: "通信",
     Block.STRUCTURE: "構造",
 }
-_BLOCK_NOTES = {Block.ORBIT: "円軌道を仮定。日陰は太陽が軌道面にある最悪の場合"}
+_BLOCK_NOTES = {
+    Block.ORBIT: "円軌道を仮定。日陰は太陽が軌道面にある最悪の場合",
+    Block.MASS: "OPT-CUBE の機器構成を目安に使用",
+    Block.THERMAL: (
+        "衛星全体を 1 節点で計算。機器ごとの温度ではありません。"
+        "高温は日陰最小と発熱最大、低温は日陰最大と発熱最小の場合"
+    ),
+}
+_NEEDS_BUS_NOTE = "機器構成が必要です。今は 3U だけ登録しています"
+_WAITING_NOTES = {Block.MASS: _NEEDS_BUS_NOTE, Block.THERMAL: _NEEDS_BUS_NOTE}
 
 
 class BlockState(StrEnum):
@@ -40,21 +50,43 @@ class BlockStatus(Frozen):
     note: str = ""
 
 
+def _bus_inputs(bus: ReferenceBus) -> dict[str, float]:
+    return {
+        "parts_mass_kg": bus.parts_mass_kg,
+        "mass_margin_kg": bus.mass_margin_kg,
+        "max_consumed_power_w": bus.max_consumed_power_w,
+        "min_consumed_power_w": bus.min_consumed_power_w,
+        "surface_absorptivity_ratio": bus.surface_absorptivity,
+        "surface_emissivity_ratio": bus.surface_emissivity,
+        "allowable_max_temperature_k": bus.allowable_max_temperature_k,
+        "allowable_min_temperature_k": bus.allowable_min_temperature_k,
+    }
+
+
 def project_ledger(project: Project) -> Ledger:
     design = project.design
     if design is None:
         return solve({})
-    return solve(
-        {
-            "altitude_m": design.orbit.altitude_m,
-            "inclination_deg": design.orbit.inclination_deg,
-            "max_mass_kg": form_factor(design.form_factor).max_mass_kg,
-        }
-    )
+    size = envelope(design.form_factor)
+    inputs = {
+        "altitude_m": design.orbit.altitude_m,
+        "inclination_deg": design.orbit.inclination_deg,
+        "max_mass_kg": form_factor(design.form_factor).max_mass_kg,
+        "envelope_width_m": size.width_m,
+        "envelope_depth_m": size.depth_m,
+        "envelope_length_m": size.length_m,
+        "required_natural_frequency_hz": load_launch_vehicle().longitudinal_frequency_hz,
+    }
+    bus = reference_bus(design.form_factor)
+    if bus is None:
+        return solve(inputs)
+    bus_inputs = _bus_inputs(bus)
+    return solve({**inputs, **bus_inputs}, provisional=frozenset(bus_inputs))
 
 
 def format_entry(equation: Equation, entry: LedgerEntry) -> str:
-    text = f"{entry.value / equation.display_divisor:.1f} {equation.display_unit}".strip()
+    value = entry.value / equation.display_divisor + equation.display_offset
+    text = f"{value:.{equation.display_digits}f} {equation.display_unit}".strip()
     return f"{text}（暫定）" if entry.provisional else text
 
 
@@ -64,7 +96,7 @@ def _block_status(block: Block, ledger: Ledger) -> BlockStatus:
     if not equations:
         return BlockStatus(state=BlockState.NOT_BUILT, **common)
     if any(ledger.value(item.output) is None for item in equations):
-        return BlockStatus(state=BlockState.WAITING, **common)
+        return BlockStatus(state=BlockState.WAITING, note=_WAITING_NOTES.get(block, ""), **common)
     values = tuple(
         DisplayValue(label=item.label, text=format_entry(item, ledger.get(item.output)))
         for item in equations

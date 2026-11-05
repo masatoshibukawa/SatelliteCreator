@@ -1,0 +1,34 @@
+# Stand-in equipment until parts are chosen per mission. The owner accepted rough values here.
+# Every number comes from the OPT-CUBE report: masses p. 12, power p. 17, surface and limits p. 16.
+reference_buses:
+  - form_factor: 3U
+    name: OPT-CUBE の機器構成
+    source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
+    section: pp. 12, 16, 17
+    mass_margin_g: 102.87
+    min_consumed_power_mw: 1229
+    max_consumed_power_mw: 12586
+    surface_absorptivity: 0.92
+    surface_emissivity: 0.80
+    allowable_min_c: -10
+    allowable_max_c: 50
+    parts:
+      - {id: MOT, group: ミッション, mass_g: 900}
+      - {id: LTS, group: ミッション, mass_g: 42.73}
+      - {id: SCC, group: ミッション, mass_g: 19.01}
+      - {id: GPS-ANT, group: 姿勢制御, mass_g: 32.54}
+      - {id: GPS-R, group: 姿勢制御, mass_g: 33.08}
+      - {id: GAS, group: 姿勢制御, mass_g: 8.34}
+      - {id: MTQ, group: 姿勢制御, mass_g: 76.6936}
+      - {id: ACU, group: 姿勢制御, mass_g: 280.66}
+      - {id: SANT, group: 通信, mass_g: 8.34}
+      - {id: UANT, group: 通信, mass_g: 17.23}
+      - {id: ABU, group: 通信, mass_g: 300}
+      - {id: TBU, group: 通信, mass_g: 176.08}
+      - {id: STR, group: 構体, mass_g: 1060}
+      - {id: DSAP, group: 構体, mass_g: 185.76}
+      - {id: DM, group: 展開機構, mass_g: 80.19}
+      - {id: BAT, group: 電源, mass_g: 309.4}
+      - {id: SCP, group: 電源, mass_g: 152.04}
+      - {id: screws, group: その他, mass_g: 150}
+      - {id: adhesive, group: その他, mass_g: 50}

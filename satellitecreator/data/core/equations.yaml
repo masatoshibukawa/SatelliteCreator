@@ -1,5 +1,4 @@
-# Quantities that come from outside the equations. total_mass_kg becomes an equation output
-# once the parts catalog exists.
+# Quantities that come from outside the equations.
 inputs:
   - key: altitude_m
     label: 軌道高度
@@ -7,24 +6,42 @@ inputs:
     label: 軌道傾斜角
   - key: max_mass_kg
     label: 質量の上限
-  - key: total_mass_kg
-    label: 搭載機器の質量の合計
+  - key: envelope_width_m
+    label: 外形の幅
+  - key: envelope_depth_m
+    label: 外形の奥行
+  - key: envelope_length_m
+    label: 外形の長さ
+  - key: required_natural_frequency_hz
+    label: ロケットが要求する固有振動数
+  - key: parts_mass_kg
+    label: 機器の質量の合計
+  - key: mass_margin_kg
+    label: 質量の余裕
+  - key: max_consumed_power_w
+    label: 最大の消費電力
+  - key: min_consumed_power_w
+    label: 最小の消費電力
+  - key: surface_absorptivity_ratio
+    label: 表面の太陽光吸収率
+  - key: surface_emissivity_ratio
+    label: 表面の赤外放射率
+  - key: allowable_max_temperature_k
+    label: 許容温度の上限
+  - key: allowable_min_temperature_k
+    label: 許容温度の下限
 
 # Named by checks already. Each one moves to `equations` when its block is built.
 planned_quantities:
   - orbit_generated_energy_j
   - orbit_consumed_energy_j
-  - heat_load_w
-  - consumed_power_w
-  - temperature_margin_k
   - link_margin_db
   - margin_of_safety_ratio
   - natural_frequency_hz
-  - required_natural_frequency_hz
   - orbit_lifetime_s
   - mission_duration_s
 
-# Circular orbit only. The eclipse values are the worst case, with the Sun in the orbit plane.
+# Circular orbit only. The maximum eclipse has the Sun in the orbit plane (beta = 0).
 equations:
   - output: orbit_radius_m
     label: 軌道半径
@@ -72,3 +89,126 @@ equations:
     summary: true
     source: https://ntrs.nasa.gov/api/citations/20205003902/downloads/Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf
     section: p. 139
+  - output: max_beta_deg
+    label: 最大のベータ角
+    formula: β_max = min(90°, i + ε)
+    inputs: [inclination_deg, earth_obliquity_deg]
+    block: orbit
+    source: https://ntrs.nasa.gov/api/citations/20205003902/downloads/Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf
+    section: p. 140
+  - output: min_eclipse_fraction_ratio
+    label: 最小の日陰率
+    formula: f = asin(√(((R/r)² - sin²β)/cos²β))/π
+    inputs: [earth_radius_m, orbit_radius_m, max_beta_deg]
+    block: orbit
+    source: https://ntrs.nasa.gov/api/citations/20205003902/downloads/Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf
+    section: pp. 137-138
+  - output: min_eclipse_s
+    label: 最小の日陰時間
+    formula: T_e = f T
+    inputs: [orbit_period_s, min_eclipse_fraction_ratio]
+    block: orbit
+    display_divisor: 60
+    display_unit: 分
+    source: https://ntrs.nasa.gov/api/citations/20205003902/downloads/Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf
+    section: p. 138
+
+  # Mass. Takes the parts and margin of the reference bus.
+  - output: total_mass_kg
+    label: 総質量
+    formula: m = Σm_i + Δm
+    inputs: [parts_mass_kg, mass_margin_kg]
+    block: mass
+    display_unit: kg
+    display_digits: 2
+    summary: true
+    source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
+    section: p. 12, 表 16
+
+  # Thermal: the whole satellite as one node. The hot and cold cases bound the environment with
+  # the paired tolerances of JERG-2-310A. Scaling albedo by the sun angle is this project's model.
+  - output: surface_area_m2
+    label: 表面積
+    formula: A = 2(wd + wl + dl)
+    inputs: [envelope_width_m, envelope_depth_m, envelope_length_m]
+    block: thermal
+    source: https://www.nasa.gov/wp-content/uploads/2018/01/cubesatdesignspecificationrev14_12022-02-09.pdf
+    section: Appendix B
+  - output: earth_view_factor_ratio
+    label: 地球への形態係数
+    formula: F = (1 - √(1 - (R/r)²))/2
+    inputs: [earth_radius_m, orbit_radius_m]
+    block: thermal
+    provisional: true
+    notes: View factor of a small sphere to the Earth. Source still to be confirmed.
+  - output: sun_absorbed_w
+    label: 太陽からの吸収熱
+    formula: Q_s = α S A/4
+    inputs: [surface_absorptivity_ratio, solar_flux_wm2, surface_area_m2]
+    block: thermal
+    provisional: true
+    notes: A/4 is the mean projected area of a convex body in random orientation.
+  - output: albedo_high_absorbed_w
+    label: アルベドからの吸収熱（上側）
+    formula: Q_a = α a S A F
+    inputs: [surface_absorptivity_ratio, albedo_high_ratio, solar_flux_wm2, surface_area_m2, earth_view_factor_ratio]
+    block: thermal
+    provisional: true
+  - output: albedo_low_absorbed_w
+    label: アルベドからの吸収熱（下側）
+    formula: Q_a = α a S A F
+    inputs: [surface_absorptivity_ratio, albedo_low_ratio, solar_flux_wm2, surface_area_m2, earth_view_factor_ratio]
+    block: thermal
+    provisional: true
+  - output: earth_ir_high_absorbed_w
+    label: 地球赤外からの吸収熱（上側）
+    formula: Q_e = ε q A F
+    inputs: [surface_emissivity_ratio, earth_ir_high_wm2, surface_area_m2, earth_view_factor_ratio]
+    block: thermal
+    provisional: true
+  - output: earth_ir_low_absorbed_w
+    label: 地球赤外からの吸収熱（下側）
+    formula: Q_e = ε q A F
+    inputs: [surface_emissivity_ratio, earth_ir_low_wm2, surface_area_m2, earth_view_factor_ratio]
+    block: thermal
+    provisional: true
+  - output: thermal_capacity_jpk
+    label: 熱容量
+    formula: C = m c
+    inputs: [total_mass_kg, specific_heat_jpkgk]
+    block: thermal
+    provisional: true
+  - output: orbit_max_temperature_k
+    label: 周回の最高温度
+    formula: C dT/dt = Q - εσAT⁴（日陰最小、発熱最大）
+    inputs: [sun_absorbed_w, albedo_high_absorbed_w, albedo_low_absorbed_w, earth_ir_high_absorbed_w, earth_ir_low_absorbed_w, max_beta_deg, max_consumed_power_w, surface_emissivity_ratio, surface_area_m2, stefan_boltzmann_wm2k4, thermal_capacity_jpk, orbit_period_s, min_eclipse_s]
+    block: thermal
+    display_offset: -273.15
+    display_unit: ℃
+    summary: true
+    provisional: true
+  - output: orbit_min_temperature_k
+    label: 周回の最低温度
+    formula: C dT/dt = Q - εσAT⁴（日陰最大、発熱最小）
+    inputs: [sun_absorbed_w, albedo_high_absorbed_w, albedo_low_absorbed_w, earth_ir_high_absorbed_w, earth_ir_low_absorbed_w, min_consumed_power_w, surface_emissivity_ratio, surface_area_m2, stefan_boltzmann_wm2k4, thermal_capacity_jpk, orbit_period_s, max_eclipse_s]
+    block: thermal
+    display_offset: -273.15
+    display_unit: ℃
+    summary: true
+    provisional: true
+  - output: temperature_margin_k
+    label: 温度余裕
+    formula: min(T_上限 - T_最高, T_最低 - T_下限)
+    inputs: [orbit_max_temperature_k, orbit_min_temperature_k, allowable_max_temperature_k, allowable_min_temperature_k]
+    block: thermal
+    source: https://www.satcon.jp/contest/doc/1_boshu26.pdf
+    section: "6.1 (3) 11)"
+  - output: max_radiated_power_w
+    label: 放熱能力
+    formula: Q = εσAT⁴（許容上限温度）
+    inputs: [surface_emissivity_ratio, surface_area_m2, stefan_boltzmann_wm2k4, allowable_max_temperature_k]
+    block: thermal
+    display_unit: W
+    summary: true
+    source: https://tfaws.nasa.gov/wp-content/uploads/On-Orbit_Thermal_Environments_TFAWS_2014.pdf
+    section: p. 16
