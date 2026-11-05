@@ -30,7 +30,11 @@ export default function Home() {
         </div>
         <div className="column column-center">
           <SatelliteViewer satellite={result?.satellite ?? null} />
-          <SimulationPanel blocks={result?.simulations ?? []} checks={result?.checks ?? []} />
+          <SimulationPanel
+            blocks={result?.simulations ?? []}
+            checks={result?.checks ?? []}
+            loop={result?.iteration ?? null}
+          />
           <ReviewStrip reviews={result?.reviews ?? []} scopeFindings={result?.scope_findings ?? []} />
         </div>
         <div className="column column-document">

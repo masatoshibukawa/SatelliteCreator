@@ -381,6 +381,10 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+.loop-log {
+  font-size: 13px;
+}
+
 .block-note {
   grid-column: 3;
   font-size: 12px;

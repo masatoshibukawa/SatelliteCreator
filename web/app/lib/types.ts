@@ -87,6 +87,19 @@ export interface CheckResult {
   provisional: boolean;
 }
 
+export type LoopStatus = "converged" | "no_solution" | "limit_reached" | "needs_input";
+
+export interface IterationRecord {
+  number: number;
+  messages: { agent: string; text: string }[];
+}
+
+export interface DesignLoop {
+  status: LoopStatus;
+  iterations: IterationRecord[];
+  questions: string[];
+}
+
 export interface SessionResult {
   refusal: string;
   questions: Question[];
@@ -97,4 +110,5 @@ export interface SessionResult {
   scope_findings: Finding[];
   document: DesignDocument | null;
   launch_request: Record<string, unknown> | null;
+  iteration: DesignLoop | null;
 }

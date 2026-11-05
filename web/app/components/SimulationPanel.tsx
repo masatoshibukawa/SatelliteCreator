@@ -1,4 +1,4 @@
-import type { BlockState, BlockStatus, CheckResult } from "../lib/types";
+import type { BlockState, BlockStatus, CheckResult, DesignLoop, LoopStatus } from "../lib/types";
 
 const STATE_LABEL: Record<BlockState, string> = {
   done: "計算済み",
@@ -6,7 +6,20 @@ const STATE_LABEL: Record<BlockState, string> = {
   not_built: "未実装",
 };
 
-export default function SimulationPanel({ blocks, checks }: { blocks: BlockStatus[]; checks: CheckResult[] }) {
+const LOOP_LABEL: Record<LoopStatus, string> = {
+  converged: "すべての確認に合格",
+  no_solution: "解決策が見つかりません",
+  limit_reached: "反復の上限に到達",
+  needs_input: "入力待ち",
+};
+
+interface SimulationPanelProps {
+  blocks: BlockStatus[];
+  checks: CheckResult[];
+  loop: DesignLoop | null;
+}
+
+export default function SimulationPanel({ blocks, checks, loop }: SimulationPanelProps) {
   const finished = checks.filter((item) => item.state !== "not_run").length;
   const failed = checks.filter((item) => item.state === "failed");
 
@@ -32,6 +45,22 @@ export default function SimulationPanel({ blocks, checks }: { blocks: BlockStatu
         <p className="muted">
           整合チェック {finished} / {checks.length} 件を実行済み
         </p>
+      )}
+      {loop !== null && (
+        <div className="loop-log">
+          <p>
+            反復 {loop.iterations.length} 回: {LOOP_LABEL[loop.status]}
+          </p>
+          <ol>
+            {loop.iterations.flatMap((record) =>
+              record.messages.map((message, index) => (
+                <li key={`${record.number}-${index}`}>
+                  {message.agent}: {message.text}
+                </li>
+              )),
+            )}
+          </ol>
+        </div>
       )}
       {failed.map((item) => (
         <p key={item.id} className="msg-warning">
