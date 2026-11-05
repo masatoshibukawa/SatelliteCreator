@@ -7,6 +7,7 @@ from satellitecreator.design import (
     check_scope,
     envelope,
     form_factor,
+    load_launch_vehicle,
     load_scope_limits,
 )
 
@@ -84,6 +85,32 @@ def test_altitude_above_leo_is_out_of_scope():
     assert [item.code for item in check_scope(_design(altitude_m=2_000_001))] == [
         "altitude_out_of_scope"
     ]
+
+
+def test_altitude_exactly_at_the_lower_limit_is_in_scope():
+    assert check_scope(_design(altitude_m=400_000)) == ()
+
+
+def test_altitude_below_the_lower_limit_is_out_of_scope():
+    findings = check_scope(_design(altitude_m=399_999))
+
+    assert [item.code for item in findings] == ["altitude_below_scope"]
+
+
+def test_lower_altitude_limit_is_marked_as_a_project_decision():
+    limit = load_scope_limits().leo_min_altitude
+
+    assert limit.value_m == 400_000
+    assert limit.provisional
+
+
+def test_launch_vehicle_baseline_is_h2a_with_its_frequency_requirement():
+    vehicle = load_launch_vehicle()
+
+    assert vehicle.name == "H-IIA"
+    assert vehicle.longitudinal_frequency_hz == 100
+    assert vehicle.lateral_frequency_hz == 50
+    assert vehicle.source
 
 
 def test_unsupported_form_factor_is_out_of_scope():

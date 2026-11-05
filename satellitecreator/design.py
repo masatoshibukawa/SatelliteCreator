@@ -31,7 +31,16 @@ class AltitudeLimit(Sourced):
 class ScopeLimits(Frozen):
     form_factors: tuple[FormFactor, ...]
     envelopes: tuple[Envelope, ...]
+    leo_min_altitude: AltitudeLimit
     leo_max_altitude: AltitudeLimit
+
+
+class LaunchVehicle(Sourced):
+    """The baseline launcher until RocketCreater can supply these conditions itself."""
+
+    name: str
+    longitudinal_frequency_hz: float = Field(gt=0)
+    lateral_frequency_hz: float = Field(gt=0)
 
 
 class Orbit(Frozen):
@@ -47,6 +56,11 @@ class SatelliteDesign(Frozen):
 @cache
 def load_scope_limits() -> ScopeLimits:
     return ScopeLimits(**load_yaml("constraints/scope.yaml"))
+
+
+@cache
+def load_launch_vehicle() -> LaunchVehicle:
+    return LaunchVehicle(**load_yaml("constraints/launch_vehicle.yaml"))
 
 
 def form_factor(form_factor_id: str) -> FormFactor:
@@ -72,6 +86,13 @@ def check_scope(design: SatelliteDesign) -> tuple[Finding, ...]:
                 code="form_factor_out_of_scope",
                 message=f"対応していない形状です: {design.form_factor}",
                 subject=design.form_factor,
+            ),
+        )
+    if design.orbit.altitude_m < limits.leo_min_altitude.value_m:
+        findings += (
+            Finding(
+                code="altitude_below_scope",
+                message=f"高度が下限より低いです: 高度 {design.orbit.altitude_m / 1000:g} km",
             ),
         )
     if design.orbit.altitude_m > limits.leo_max_altitude.value_m:

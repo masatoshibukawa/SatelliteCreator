@@ -1,0 +1,7 @@
+# Baseline launcher, set by the owner on 2026-11-06. The figures are quoted by a paper that cites
+# the H-IIA requirement, and have not been checked against the launcher's own manual.
+name: H-IIA
+longitudinal_frequency_hz: 100
+lateral_frequency_hz: 50
+source: https://www.preprints.org/manuscript/202404.0391
+section: Introduction

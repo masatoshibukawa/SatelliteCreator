@@ -44,6 +44,11 @@ envelopes:
     source: https://www.nasa.gov/wp-content/uploads/2018/01/cubesatdesignspecificationrev14_12022-02-09.pdf
     section: Appendix B
 
+leo_min_altitude:
+  value_m: 400000
+  provisional: true
+  notes: Project decision by the owner on 2026-11-06, not a value from a standard.
+
 leo_max_altitude:
   value_m: 2000000
   source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JMR-003E.pdf
