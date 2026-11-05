@@ -1,0 +1,25 @@
+# Reviews in the order they happen. `phase` is the phase the review closes.
+reviews:
+  - review: MDR
+    phase: pre_a
+    outputs: [ミッション要求書（案）]
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-100.pdf
+    section: "10.1"
+  - review: SRR
+    phase: a
+    outputs: [システム要求書, 運用コンセプト]
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-100.pdf
+    section: "10.1"
+  - review: SDR
+    phase: a
+    outputs: [システム仕様書]
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-100.pdf
+    section: "10.1"
+  - review: PDR
+    phase: b
+    provisional: true
+    notes: JERG-2-100 10.1 places this review in the phase chart but its output table stops at SDR.
+  - review: CDR
+    phase: c
+    provisional: true
+    notes: JERG-2-100 10.1 places this review in the phase chart but its output table stops at SDR.

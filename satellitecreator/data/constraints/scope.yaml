@@ -1,0 +1,50 @@
+# Limits of what this project designs: CubeSats deployed from a pod, in low Earth orbit.
+form_factors:
+  - id: 1U
+    max_mass_kg: 1.5
+    source: https://www.satcon.jp/contest/doc/1_boshu26.pdf
+    section: "6.1 (1) a"
+  - id: 2U
+    max_mass_kg: 3.0
+    source: https://www.satcon.jp/contest/doc/1_boshu26.pdf
+    section: "6.1 (1) a"
+  - id: 3U
+    max_mass_kg: 4.5
+    source: https://www.satcon.jp/contest/doc/1_boshu26.pdf
+    section: "6.1 (1) a"
+  - id: 6U
+    max_mass_kg: 9.0
+    source: https://www.satcon.jp/contest/doc/1_boshu26.pdf
+    section: "6.1 (1) a"
+
+# Launch envelope along the CubeSat X, Y and Z axes. Z is the rail direction.
+envelopes:
+  - id: 1U
+    width_m: 0.1
+    depth_m: 0.1
+    length_m: 0.1135
+    source: https://www.nasa.gov/wp-content/uploads/2018/01/cubesatdesignspecificationrev14_12022-02-09.pdf
+    section: Appendix B
+  - id: 2U
+    width_m: 0.1
+    depth_m: 0.1
+    length_m: 0.227
+    source: https://www.nasa.gov/wp-content/uploads/2018/01/cubesatdesignspecificationrev14_12022-02-09.pdf
+    section: Appendix B
+  - id: 3U
+    width_m: 0.1
+    depth_m: 0.1
+    length_m: 0.3405
+    source: https://www.nasa.gov/wp-content/uploads/2018/01/cubesatdesignspecificationrev14_12022-02-09.pdf
+    section: Appendix B
+  - id: 6U
+    width_m: 0.2263
+    depth_m: 0.1
+    length_m: 0.366
+    source: https://www.nasa.gov/wp-content/uploads/2018/01/cubesatdesignspecificationrev14_12022-02-09.pdf
+    section: Appendix B
+
+leo_max_altitude:
+  value_m: 2000000
+  source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JMR-003E.pdf
+  section: "(16) 保護軌道域 a"
