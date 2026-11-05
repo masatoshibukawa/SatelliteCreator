@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from enum import StrEnum
 
+from satellitecreator.agents import design_agents
 from satellitecreator.core.checks import CheckResult, evaluate_checks
 from satellitecreator.design import check_scope, envelope, form_factor
 from satellitecreator.document import Document, build_document
@@ -113,7 +114,7 @@ def run_session(prompt: str, answers: Mapping[str, str]) -> SessionResult:
     if refusal:
         return SessionResult(refusal=refusal)
     intake = build_intake(prompt, answers)
-    loop = run_design_loop(intake.project)
+    loop = run_design_loop(intake.project, agents=design_agents())
     project = loop.project
     ledger = project_ledger(project)
     return SessionResult(

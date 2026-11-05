@@ -26,7 +26,7 @@ from satellitecreator.simulation import project_ledger
 
 MAX_ITERATIONS = 20
 _HEATER_STEP_W = 1.0
-_MAX_HEATER_W = 10.0
+MAX_HEATER_W = 10.0
 _NEEDS_BUS_QUESTION = (
     "搭載機器の質量と消費電力を教えてください。今は 3U の機器構成だけ登録しています"
 )
@@ -72,7 +72,7 @@ class DesignAgent(Protocol):
         """Returns a proposed change, or None when this agent has nothing to change."""
 
 
-def _with_design(project: Project, **changes: object) -> Project:
+def with_design(project: Project, **changes: object) -> Project:
     return project.model_copy(update={"design": project.design.model_copy(update=changes)})
 
 
@@ -113,17 +113,17 @@ class ThermalAgent:
         text = f"高温側が {-hot_margin_k:.1f} K 超過。表面を{choice.name}に変更"
         return DesignChange(
             message=AgentMessage(agent=self.name, text=text),
-            project=_with_design(project, surface=choice.name),
+            project=with_design(project, surface=choice.name),
         )
 
     def _more_heat(self, project: Project, cold_margin_k: float) -> DesignChange | None:
         heater_w = project.design.heater_power_w + _HEATER_STEP_W
-        if heater_w > _MAX_HEATER_W:
+        if heater_w > MAX_HEATER_W:
             return None
         text = f"低温側が {-cold_margin_k:.1f} K 不足。ヒータを {heater_w:g} W に増加"
         return DesignChange(
             message=AgentMessage(agent=self.name, text=text),
-            project=_with_design(project, heater_power_w=heater_w),
+            project=with_design(project, heater_power_w=heater_w),
         )
 
 
