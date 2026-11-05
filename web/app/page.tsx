@@ -34,7 +34,7 @@ export default function Home() {
           <ReviewStrip reviews={result?.reviews ?? []} scopeFindings={result?.scope_findings ?? []} />
         </div>
         <div className="column column-document">
-          <DocumentPanel document={result?.document ?? null} />
+          <DocumentPanel document={result?.document ?? null} launchRequest={result?.launch_request ?? null} />
         </div>
       </div>
     </main>

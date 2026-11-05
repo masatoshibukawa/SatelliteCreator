@@ -96,4 +96,5 @@ export interface SessionResult {
   satellite: SatelliteView | null;
   scope_findings: Finding[];
   document: DesignDocument | null;
+  launch_request: Record<string, unknown> | null;
 }
