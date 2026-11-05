@@ -181,6 +181,15 @@ def _system_section(project: Project) -> Section:
         f"軌道: 高度 {design.orbit.altitude_m / 1000:g} km、"
         f"軌道傾斜角 {design.orbit.inclination_deg:g} 度",
     )
+    choices = (
+        *((f"表面: {design.surface}（反復設計で選択）",) if design.surface else ()),
+        *(
+            (f"ヒータ: {design.heater_power_w:g} W（反復設計で追加）",)
+            if design.heater_power_w
+            else ()
+        ),
+    )
+    lines = (*lines, *choices)
     out_of_scope = "、".join(item.message for item in check_scope(design))
     note = out_of_scope or "搭載機器と質量配分は未計算です"
     return Section(

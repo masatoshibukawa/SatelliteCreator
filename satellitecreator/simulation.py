@@ -4,10 +4,15 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from satellitecreator.catalog import ReferenceBus, reference_bus
+from satellitecreator.catalog import ReferenceBus, reference_bus, surface_finish
 from satellitecreator.core.ledger import Ledger, LedgerEntry, solve
 from satellitecreator.core.registry import Block, Equation, load_equations
-from satellitecreator.design import envelope, form_factor, load_launch_vehicle
+from satellitecreator.design import (
+    SatelliteDesign,
+    envelope,
+    form_factor,
+    load_launch_vehicle,
+)
 from satellitecreator.project import Project
 from satellitecreator.schema import Frozen
 
@@ -50,14 +55,15 @@ class BlockStatus(Frozen):
     note: str = ""
 
 
-def _bus_inputs(bus: ReferenceBus) -> dict[str, float]:
+def _bus_inputs(bus: ReferenceBus, design: SatelliteDesign) -> dict[str, float]:
+    finish = None if design.surface is None else surface_finish(design.surface)
     return {
         "parts_mass_kg": bus.parts_mass_kg,
         "mass_margin_kg": bus.mass_margin_kg,
-        "max_consumed_power_w": bus.max_consumed_power_w,
-        "min_consumed_power_w": bus.min_consumed_power_w,
-        "surface_absorptivity_ratio": bus.surface_absorptivity,
-        "surface_emissivity_ratio": bus.surface_emissivity,
+        "max_consumed_power_w": design.peak_power_w or bus.max_consumed_power_w,
+        "min_consumed_power_w": bus.min_consumed_power_w + design.heater_power_w,
+        "surface_absorptivity_ratio": finish.absorptivity if finish else bus.surface_absorptivity,
+        "surface_emissivity_ratio": finish.emissivity if finish else bus.surface_emissivity,
         "allowable_max_temperature_k": bus.allowable_max_temperature_k,
         "allowable_min_temperature_k": bus.allowable_min_temperature_k,
     }
@@ -80,7 +86,7 @@ def project_ledger(project: Project) -> Ledger:
     bus = reference_bus(design.form_factor)
     if bus is None:
         return solve(inputs)
-    bus_inputs = _bus_inputs(bus)
+    bus_inputs = _bus_inputs(bus, design)
     return solve({**inputs, **bus_inputs}, provisional=frozenset(bus_inputs))
 
 

@@ -38,6 +38,7 @@ _ALTITUDE_ANY = re.compile(_KILOMETRES, re.IGNORECASE)
 _INCLINATION_LABELLED = re.compile(
     r"傾斜角?\D{0,8}?" + _NUMBER + r"\s*(?:度|deg|°)?", re.IGNORECASE
 )
+_PEAK_POWER = re.compile(r"消費電力\D{0,8}?" + _NUMBER + r"\s*W", re.IGNORECASE)
 _BARE_VALUE = re.compile(r"^\s*" + _NUMBER + r"\s*(?:km|キロ|度|deg|°)?\s*$", re.IGNORECASE)
 _HEDGE_BEFORE = re.compile(r"約|およそ")
 _HEDGE_AFTER = re.compile(r"\s*(?:以上|以下|未満|以内|超|程度|くらい|ぐらい|前後|付近|あたり)")
@@ -133,6 +134,11 @@ def parse_inclination_deg(text: str, *, bare: bool = False) -> float | None:
     else:
         degrees = _bare_number(normalized) if bare else None
     return degrees if degrees is not None and degrees <= 180 else None
+
+
+def parse_peak_power_w(text: str) -> float | None:
+    match = _PEAK_POWER.search(_normalized(text))
+    return None if match is None else _exact_number(match)
 
 
 def _resolve(
@@ -271,12 +277,15 @@ def _mission(
 
 
 def _design(
-    form_factor_id: str | None, altitude_m: float | None, inclination_deg: float | None
+    form_factor_id: str | None,
+    altitude_m: float | None,
+    inclination_deg: float | None,
+    peak_power_w: float | None,
 ) -> SatelliteDesign | None:
     if form_factor_id is None or altitude_m is None or inclination_deg is None:
         return None
     orbit = Orbit(altitude_m=altitude_m, inclination_deg=inclination_deg)
-    return SatelliteDesign(form_factor=form_factor_id, orbit=orbit)
+    return SatelliteDesign(form_factor=form_factor_id, orbit=orbit, peak_power_w=peak_power_w)
 
 
 def build_intake(prompt: str, answers: Mapping[str, str]) -> Intake:
@@ -314,7 +323,12 @@ def build_intake(prompt: str, answers: Mapping[str, str]) -> Intake:
             *_function_requirements(free_text),
         ),
         operations_concept=free_text["operations_concept"].answer,
-        design=_design(form_factor_id, altitude[1], inclination[1]),
+        design=_design(
+            form_factor_id,
+            altitude[1],
+            inclination[1],
+            parse_peak_power_w(f"{prompt} {answers.get('power', '')}"),
+        ),
     )
     questions = (form_question, altitude[0], inclination[0], *free_text.values())
     return Intake(project=project, questions=questions, form_factor=form_factor_id)

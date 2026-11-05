@@ -32,3 +32,10 @@ reference_buses:
       - {id: SCP, group: 電源, mass_g: 152.04}
       - {id: screws, group: その他, mass_g: 150}
       - {id: adhesive, group: その他, mass_g: 50}
+
+# Finishes the design loop may choose from. Values from the OPT-CUBE report, p. 16, 表 23.
+surface_finishes:
+  - {name: 太陽電池セル, absorptivity: 0.92, emissivity: 0.80, source: "https://www.satcon.jp/history/prize22/pdf/22_asj.pdf", section: "p. 16, 表 23"}
+  - {name: 黒塗り, absorptivity: 0.67, emissivity: 0.89, source: "https://www.satcon.jp/history/prize22/pdf/22_asj.pdf", section: "p. 16, 表 23"}
+  - {name: カプトン, absorptivity: 0.52, emissivity: 0.76, source: "https://www.satcon.jp/history/prize22/pdf/22_asj.pdf", section: "p. 16, 表 23"}
+  - {name: アルミ, absorptivity: 0.26, emissivity: 0.03, source: "https://www.satcon.jp/history/prize22/pdf/22_asj.pdf", section: "p. 16, 表 23"}

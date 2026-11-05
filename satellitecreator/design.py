@@ -51,6 +51,9 @@ class Orbit(Frozen):
 class SatelliteDesign(Frozen):
     form_factor: str
     orbit: Orbit
+    surface: str | None = None
+    heater_power_w: float = Field(default=0.0, ge=0)
+    peak_power_w: float | None = Field(default=None, gt=0)
 
 
 @cache

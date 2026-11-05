@@ -18,6 +18,12 @@ class Part(Frozen):
     mass_g: float = Field(gt=0)
 
 
+class SurfaceFinish(Sourced):
+    name: str
+    absorptivity: float = Field(gt=0, le=1)
+    emissivity: float = Field(gt=0, le=1)
+
+
 class ReferenceBus(Sourced):
     form_factor: str
     name: str
@@ -59,6 +65,16 @@ class ReferenceBus(Sourced):
 def load_reference_buses() -> tuple[ReferenceBus, ...]:
     data = load_yaml("catalog/reference_buses.yaml")["reference_buses"]
     return tuple(ReferenceBus(**item) for item in data)
+
+
+@cache
+def load_surface_finishes() -> tuple[SurfaceFinish, ...]:
+    data = load_yaml("catalog/reference_buses.yaml")["surface_finishes"]
+    return tuple(SurfaceFinish(**item) for item in data)
+
+
+def surface_finish(name: str) -> SurfaceFinish:
+    return next(item for item in load_surface_finishes() if item.name == name)
 
 
 def reference_bus(form_factor_id: str) -> ReferenceBus | None:
