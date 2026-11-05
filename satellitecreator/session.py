@@ -13,6 +13,7 @@ from satellitecreator.design import check_scope, envelope, form_factor
 from satellitecreator.document import Document, build_document
 from satellitecreator.gates import evaluate_gate, pass_review
 from satellitecreator.intake import QuestionState, build_intake
+from satellitecreator.iteration import DesignLoopResult, run_design_loop
 from satellitecreator.launch_request import LaunchRequest, build_launch_request
 from satellitecreator.process import Phase, Review, load_review_specs
 from satellitecreator.project import Project
@@ -67,6 +68,7 @@ class SessionResult(Frozen):
     scope_findings: tuple[Finding, ...] = ()
     document: Document | None = None
     launch_request: LaunchRequest | None = None
+    iteration: DesignLoopResult | None = None
 
 
 def check_request(text: str) -> str | None:
@@ -111,7 +113,8 @@ def run_session(prompt: str, answers: Mapping[str, str]) -> SessionResult:
     if refusal:
         return SessionResult(refusal=refusal)
     intake = build_intake(prompt, answers)
-    project = intake.project
+    loop = run_design_loop(intake.project)
+    project = loop.project
     ledger = project_ledger(project)
     return SessionResult(
         questions=intake.questions,
@@ -123,4 +126,5 @@ def run_session(prompt: str, answers: Mapping[str, str]) -> SessionResult:
         scope_findings=check_scope(project.design) if project.design else (),
         document=build_document(project),
         launch_request=build_launch_request(project),
+        iteration=loop,
     )

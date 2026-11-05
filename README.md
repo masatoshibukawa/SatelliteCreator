@@ -35,6 +35,12 @@ uv run pytest
 uv run python -m satellitecreator.launch_request --prompt "$(cat examples/opt_cube/request.txt)" --name OPT-CUBE --output launch_request.json
 ```
 
+反復設計はコマンドでも動きます。`DesignAgent` を実装すれば、エージェントを追加、交換できます。今は規則で動く熱のエージェントだけで、Claude のエージェントは `ANTHROPIC_API_KEY` を設定してから追加します（`.env.example` を参照）。
+
+```bash
+uv run python -m satellitecreator.iteration --prompt "高度 400 km、軌道傾斜角 51.6 度の 3U CubeSat。消費電力 20 W"
+```
+
 API は認証なしで動くため、ローカルでの利用を前提に `127.0.0.1` に限定しています。
 
 ## English summary
