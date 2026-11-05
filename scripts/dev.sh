@@ -13,6 +13,15 @@ unset VIRTUAL_ENV
 # The web UI needs Node 18.18 or newer, which may differ from the system default.
 export PATH="${SATELLITECREATOR_NODE_BIN:-$HOME/.local/opt/node22/bin}:$PATH"
 
+# Optional key for the Claude agent. Only this one line is read from the file.
+env_file="${SATELLITECREATOR_ENV_FILE:-.env}"
+if [ -f "$env_file" ]; then
+  key_line="$(grep -m1 '^ANTHROPIC_API_KEY=' "$env_file" || true)"
+  if [ -n "$key_line" ]; then
+    export ANTHROPIC_API_KEY="${key_line#ANTHROPIC_API_KEY=}"
+  fi
+fi
+
 port_in_use() {
   (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null
 }
