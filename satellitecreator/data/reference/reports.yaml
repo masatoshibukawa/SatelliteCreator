@@ -1,0 +1,31 @@
+# Numbers quoted from published contest reports. Only values and citations are kept here.
+reports:
+  - id: opt_cube
+    title: 衛星－地上間光通信技術実証キューブサット "OPT-CUBE"（第22回）
+    values:
+      - key: altitude_m
+        value: 400000
+        page: 2
+        source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
+      - key: orbit_period_s
+        value: 5460
+        page: 2
+        source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
+        notes: 周期 91 分。19 ページの表では 90 分。計算値 92.6 分との差は 1.7 %
+      - key: eclipse_s
+        value: 1980
+        page: 19
+        source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
+        notes: 日陰時間 33 分。表に太陽角度の条件は書かれていない
+  - id: satebal
+    title: "SATEBAL: A Semi-Passive Orbital Attitude Stabilization and Deorbiting System for CubeSats（第33回）"
+    values:
+      - key: semi_major_axis_m
+        value: 6910000
+        page: 14
+        source: https://www.satcon.jp/archive/prize33/pdf/d3307.pdf
+      - key: orbit_period_s
+        value: 5706
+        page: 14
+        source: https://www.satcon.jp/archive/prize33/pdf/d3307.pdf
+        notes: orbital period 95.1 minutes
