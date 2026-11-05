@@ -1,20 +1,40 @@
 # SatelliteCreator
 
-自然文の要求（何を観測・通信したいか、どの軌道で、何年動かすか、予算）から、**小型衛星（CubeSat 級）の構想設計**を作り、シミュレーションで検証した案だけを返すツールを目指すプロジェクトです。姉妹プロジェクト [RocketCreater](https://github.com/masatoshibukawa/RocketCreater)（要求からロケットを設計）と同じ考え方で作ります。
+人工衛星への要求を受け取り、衛星の開発工程に沿って対話で要求を詰め、計算で検証した**設計書**を出力するツールを目指すプロジェクトです。対象は CubeSat 1U〜6U、地球低軌道です。姉妹プロジェクト [RocketCreater](https://github.com/masatoshibukawa/RocketCreater)（要求からロケットを設計）と同じ考え方で作り、最終的には統合します。
 
-- 状態：立ち上げ直後（2026-11-05）
+- 状態：開発中。要求の整理、工程の審査、設計書の枠組み、画面まで動きます。質量、電力、軌道、回線、熱、構造の計算は未実装で、設計書の該当箇所は「未計算」と表示します
 - ライセンス：MIT
 
 ## 目指す流れ
 
-1. 要求を定量化する（軌道、ミッション期間、ペイロードの電力・質量・データ量、指向精度、予算）
-2. 実在の衛星・部品カタログ（バス、太陽電池、バッテリー、通信機、姿勢制御機器）から構成を選ぶ
-3. 電力・質量・データ・熱・軌道寿命・通信リンクの収支を計算して検証する
-4. 合格した構成だけを、部品表・収支表・図つきで返す
+1. 曖昧な要求を、対話で「確定、仮定、未定」に整理して定量化する
+2. JAXA のシステム設計標準 JERG-2-100 の審査（MDR、SRR、SDR、PDR、CDR）を関門にして、工程を順に進める
+3. 軌道、構造、熱、電源、通信、データ処理、姿勢制御を部品から設計し、計算で検証する
+4. 衛星設計コンテストの解析書の章立てで設計書を出力する
+
+衛星設計コンテストの受賞作の解析書を正解データとして、ミッション要求に対応する設計値が得られることをテストで確かめます。解析書の PDF はこのリポジトリに含めず、抽出した数値と出典だけを置きます。
+
+## 開発
+
+```bash
+uv sync
+uv run pytest
+```
+
+画面と API をまとめて起動するには、次を実行します。画面は http://127.0.0.1:3010 で開きます。
+
+```bash
+./scripts/dev.sh
+```
+
+画面には Node 18.18 以上が必要です。`scripts/dev.sh` は `~/.local/opt/node22/bin` の Node を使います。別の場所の Node を使うときは、`SATELLITECREATOR_NODE_BIN` にその `bin` を指定してください。
+
+API は認証なしで動くため、ローカルでの利用を前提に `127.0.0.1` に限定しています。
 
 ## English summary
 
-SatelliteCreator turns a plain-language mission request into a verified small-satellite
-(CubeSat-class) concept design: requirements are quantified, components are chosen from a
-sourced catalog, and power, mass, data, thermal, orbit-lifetime and link budgets are computed
-before any design is shown. Sister project of RocketCreater. MIT licensed.
+SatelliteCreator turns satellite requirements into a verified design document for 1U-6U
+CubeSats in low Earth orbit. Ambiguous requirements are refined interactively, the work passes
+through the JAXA JERG-2-100 review gates, and every number comes from code with a source.
+Award-winning reports from Japan's Satellite Design Contest serve as reference data.
+Sister project of RocketCreater. MIT licensed.

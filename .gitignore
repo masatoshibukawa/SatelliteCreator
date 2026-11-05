@@ -30,3 +30,7 @@ npm-debug.log*
 # generated outputs
 output/
 *.log
+.coverage
+
+# contest reports stay out of the repo: copyright remains with their authors
+*.pdf
