@@ -64,11 +64,37 @@ def test_unknown_design_leaves_the_system_section_pending():
 def test_uncomputed_chapters_are_pending_with_a_reason_and_no_values():
     document = build_document(build_intake(PROMPT, {}).project)
 
-    for number in ("2", "6", "7"):
+    for number in ("6", "7"):
         section = _section(document, number)
         assert section.state is SectionState.PENDING
         assert section.lines == ()
         assert section.pending_note
+
+
+def test_mission_analysis_shows_the_calculated_orbit_with_its_equation():
+    document = build_document(build_intake(PROMPT, {}).project)
+
+    section = _section(document, "2")
+
+    assert section.state is SectionState.PARTIAL
+    assert any("軌道周期: 92.6 分" in line and "T = 2π" in line for line in section.lines)
+    assert any(line.startswith("最大の日陰時間: 36.1 分") for line in section.lines)
+    assert "未計算" in section.pending_note or "電力" in section.pending_note
+
+
+def test_mission_analysis_is_pending_without_an_orbit():
+    document = build_document(build_intake("光通信を実証したい", {}).project)
+
+    section = _section(document, "2")
+
+    assert section.state is SectionState.PENDING
+    assert section.lines == ()
+
+
+def test_references_include_the_sources_of_the_equations():
+    document = build_document(build_intake(PROMPT, {}).project)
+
+    assert any("ntrs.nasa.gov" in item.url for item in document.references)
 
 
 def test_subsystem_section_stays_partial_until_calculations_exist():

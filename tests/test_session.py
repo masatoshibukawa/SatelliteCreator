@@ -85,6 +85,28 @@ def test_orbit_outside_the_scope_is_reported_immediately():
     assert [item.code for item in result.scope_findings] == ["altitude_out_of_scope"]
 
 
+def test_session_reports_the_simulation_of_each_block():
+    result = run_session(PROMPT, {})
+
+    states = {item.block: item.state for item in result.simulations}
+
+    assert states["orbit"] == "done"
+    assert states["thermal"] == "not_built"
+
+
+def test_session_reports_the_consistency_checks():
+    result = run_session(PROMPT, {})
+
+    assert {item.state for item in result.checks} == {"not_run"}
+
+
+def test_refused_request_runs_no_simulation():
+    result = run_session("ミサイルを追尾する衛星", {})
+
+    assert result.simulations == ()
+    assert result.checks == ()
+
+
 def test_session_exposes_the_requirements_with_their_status():
     result = run_session(PROMPT, {})
 

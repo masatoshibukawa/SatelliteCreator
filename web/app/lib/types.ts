@@ -62,10 +62,37 @@ export interface DesignDocument {
   markdown: string;
 }
 
+export type BlockState = "done" | "waiting" | "not_built";
+export type CheckState = "passed" | "failed" | "not_run";
+
+export interface DisplayValue {
+  label: string;
+  text: string;
+}
+
+export interface BlockStatus {
+  block: string;
+  label: string;
+  state: BlockState;
+  values: DisplayValue[];
+  note: string;
+}
+
+export interface CheckResult {
+  id: string;
+  label: string;
+  block: string;
+  state: CheckState;
+  missing: string[];
+  provisional: boolean;
+}
+
 export interface SessionResult {
   refusal: string;
   questions: Question[];
   reviews: ReviewView[];
+  simulations: BlockStatus[];
+  checks: CheckResult[];
   satellite: SatelliteView | null;
   scope_findings: Finding[];
   document: DesignDocument | null;

@@ -17,8 +17,8 @@ export default function ReviewStrip({ reviews, scopeFindings }: { reviews: Revie
   const hidden = findings.length - VISIBLE_FINDINGS;
 
   return (
-    <section className="panel reviews" aria-label="開発工程の審査">
-      <h2 className="panel-title">開発工程の審査</h2>
+    <section className="panel reviews" aria-label="工程の確認">
+      <h2 className="panel-title">工程の確認</h2>
       <p className="review-caption">
         要求がそろい、つながっているかの自動確認です。設計の妥当性はまだ判定していません。
       </p>
@@ -30,7 +30,7 @@ export default function ReviewStrip({ reviews, scopeFindings }: { reviews: Revie
           </li>
         ))}
       </ol>
-      {reviews.length === 0 && <p className="muted">要求を送ると、審査の状況を表示します。</p>}
+      {reviews.length === 0 && <p className="muted">要求を送ると、工程の状況を表示します。</p>}
       {scopeFindings.map((item) => (
         <p key={item.code} className="msg-warning">
           {item.message}

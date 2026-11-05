@@ -4,6 +4,7 @@ import DocumentPanel from "./components/DocumentPanel";
 import PromptPanel from "./components/PromptPanel";
 import ReviewStrip from "./components/ReviewStrip";
 import SatelliteViewer from "./components/SatelliteViewer";
+import SimulationPanel from "./components/SimulationPanel";
 import { useSession } from "./lib/useSession";
 
 export default function Home() {
@@ -29,6 +30,7 @@ export default function Home() {
         </div>
         <div className="column column-center">
           <SatelliteViewer satellite={result?.satellite ?? null} />
+          <SimulationPanel blocks={result?.simulations ?? []} checks={result?.checks ?? []} />
           <ReviewStrip reviews={result?.reviews ?? []} scopeFindings={result?.scope_findings ?? []} />
         </div>
         <div className="column column-document">

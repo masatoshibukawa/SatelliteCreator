@@ -23,6 +23,15 @@ def test_session_returns_the_design_state():
     assert body["document"]["sections"][0]["number"] == "1"
 
 
+def test_session_returns_the_calculated_orbit():
+    body = client.post("/session", json={"prompt": PROMPT}).json()
+
+    orbit = next(item for item in body["simulations"] if item["block"] == "orbit")
+
+    assert orbit["state"] == "done"
+    assert orbit["values"][0] == {"label": "軌道周期", "text": "92.6 分"}
+
+
 def test_session_accepts_answers():
     response = client.post(
         "/session", json={"prompt": "光通信を実証したい", "answers": {"form_factor": "2U"}}

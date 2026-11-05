@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from enum import StrEnum
 
+from satellitecreator.core.checks import CheckResult, evaluate_checks
 from satellitecreator.design import check_scope, envelope, form_factor
 from satellitecreator.document import Document, build_document
 from satellitecreator.gates import evaluate_gate, pass_review
@@ -16,6 +17,7 @@ from satellitecreator.process import Phase, Review, load_review_specs
 from satellitecreator.project import Project
 from satellitecreator.requirements import Requirement
 from satellitecreator.schema import Finding, Frozen
+from satellitecreator.simulation import BlockStatus, block_statuses, project_ledger
 
 _REFUSED_TERMS = (
     "兵器",
@@ -58,6 +60,8 @@ class SessionResult(Frozen):
     questions: tuple[QuestionState, ...] = ()
     requirements: tuple[Requirement, ...] = ()
     reviews: tuple[ReviewView, ...] = ()
+    simulations: tuple[BlockStatus, ...] = ()
+    checks: tuple[CheckResult, ...] = ()
     satellite: SatelliteView | None = None
     scope_findings: tuple[Finding, ...] = ()
     document: Document | None = None
@@ -106,10 +110,13 @@ def run_session(prompt: str, answers: Mapping[str, str]) -> SessionResult:
         return SessionResult(refusal=refusal)
     intake = build_intake(prompt, answers)
     project = intake.project
+    ledger = project_ledger(project)
     return SessionResult(
         questions=intake.questions,
         requirements=project.requirements,
         reviews=_review_views(project),
+        simulations=block_statuses(ledger),
+        checks=evaluate_checks(ledger),
         satellite=_satellite_view(intake.form_factor),
         scope_findings=check_scope(project.design) if project.design else (),
         document=build_document(project),

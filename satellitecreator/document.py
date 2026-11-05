@@ -8,11 +8,14 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+from satellitecreator.core.ledger import Ledger
+from satellitecreator.core.registry import load_constants, load_equations
 from satellitecreator.design import check_scope, envelope, form_factor, load_scope_limits
 from satellitecreator.process import load_review_specs
 from satellitecreator.project import Project, SuccessLevel
 from satellitecreator.requirements import Function, RequirementLevel, RequirementStatus
 from satellitecreator.schema import Frozen
+from satellitecreator.simulation import format_entry, project_ledger
 
 _SUBSYSTEM_LABELS = {
     Function.ORBIT: "軌道",
@@ -39,9 +42,18 @@ _CUBESAT_SPECIFICATION_URL = (
     "https://www.nasa.gov/wp-content/uploads/2018/01/"
     "cubesatdesignspecificationrev14_12022-02-09.pdf"
 )
+_ORBITAL_MECHANICS_URL = (
+    "https://ntrs.nasa.gov/api/citations/20205003902/downloads/"
+    "Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes"
+    "%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf"
+)
 _SOURCE_TITLES = {
     "https://www.satcon.jp/contest/doc/1_boshu26.pdf": "第34回衛星設計コンテスト 募集要項",
     _CUBESAT_SPECIFICATION_URL: "CubeSat Design Specification Rev. 14.1",
+    _ORBITAL_MECHANICS_URL: (
+        "NASA, Introduction to Orbital Mechanics and Spacecraft Attitudes for Thermal Engineers"
+    ),
+    "https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html": "NASA Earth Fact Sheet",
     "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JMR-003E.pdf": "JMR-003E スペースデブリ発生防止標準",
     "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-100.pdf": "JERG-2-100 システム設計標準",
 }
@@ -100,6 +112,21 @@ def _mission_section(project: Project) -> Section:
     )
     state = SectionState.FILLED if mission.success_criteria else SectionState.PARTIAL
     return Section(number="1", title=title, state=state, lines=(*lines, *details))
+
+
+def _analysis_section(ledger: Ledger) -> Section:
+    title = "ミッション解析結果"
+    lines = tuple(
+        f"{item.label}: {format_entry(item, ledger.get(item.output))}（{item.formula}）"
+        for item in load_equations()
+        if item.summary and ledger.get(item.output) is not None
+    )
+    if not lines:
+        return _pending("2", title, "軌道が決まると記載されます")
+    note = "円軌道で、日陰は太陽が軌道面にある最悪の場合です。電力と回線の解析は未計算です"
+    return Section(
+        number="2", title=title, state=SectionState.PARTIAL, lines=lines, pending_note=note
+    )
 
 
 def _results_section(project: Project) -> Section:
@@ -189,15 +216,19 @@ def _references() -> tuple[Reference, ...]:
         *(item.source for item in limits.envelopes),
         limits.leo_max_altitude.source,
         *(item.source for item in load_review_specs()),
+        *(item.source for item in load_constants()),
+        *(item.source for item in load_equations()),
     )
     unique = dict.fromkeys(source for source in sources if source)
     return tuple(Reference(title=_SOURCE_TITLES.get(url, url), url=url) for url in unique)
 
 
-def _sections(project: Project, references: tuple[Reference, ...]) -> tuple[Section, ...]:
+def _sections(
+    project: Project, ledger: Ledger, references: tuple[Reference, ...]
+) -> tuple[Section, ...]:
     return (
         _mission_section(project),
-        _pending("2", "ミッション解析結果", "軌道、電力、回線の計算を実装すると記載されます"),
+        _analysis_section(ledger),
         _results_section(project),
         _pending("4", "主張したい独創性または社会的効果", "対話の項目に追加すると記載されます"),
         _system_section(project),
@@ -273,7 +304,7 @@ def _to_markdown(
 
 def build_document(project: Project) -> Document:
     references = _references()
-    sections = _sections(project, references)
+    sections = _sections(project, project_ledger(project), references)
     checklist = _checklist(project)
     return Document(
         title=project.name,
