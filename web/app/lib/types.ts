@@ -1,0 +1,72 @@
+/** Mirrors the response of POST /session (satellitecreator/session.py). */
+
+export type SectionState = "filled" | "partial" | "pending";
+export type ReviewState = "passed" | "blocked" | "waiting";
+export type RequirementStatus = "confirmed" | "assumed" | "open";
+
+export interface Finding {
+  code: string;
+  message: string;
+  subject: string;
+}
+
+export interface Question {
+  id: string;
+  text: string;
+  answer: string;
+  from_prompt: boolean;
+  unreadable: boolean;
+  answered: boolean;
+}
+
+export interface ReviewView {
+  review: string;
+  phase: string;
+  state: ReviewState;
+  outputs: string[];
+  findings: Finding[];
+}
+
+export interface SatelliteView {
+  form_factor: string;
+  width_m: number;
+  depth_m: number;
+  length_m: number;
+  max_mass_kg: number;
+}
+
+export interface Section {
+  number: string;
+  title: string;
+  state: SectionState;
+  lines: string[];
+  pending_note: string;
+}
+
+export interface ChecklistItem {
+  number: number;
+  label: string;
+  state: SectionState;
+}
+
+export interface Reference {
+  title: string;
+  url: string;
+}
+
+export interface DesignDocument {
+  title: string;
+  sections: Section[];
+  checklist: ChecklistItem[];
+  references: Reference[];
+  markdown: string;
+}
+
+export interface SessionResult {
+  refusal: string;
+  questions: Question[];
+  reviews: ReviewView[];
+  satellite: SatelliteView | null;
+  scope_findings: Finding[];
+  document: DesignDocument | null;
+}
