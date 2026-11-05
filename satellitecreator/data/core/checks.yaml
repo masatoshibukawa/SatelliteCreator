@@ -1,0 +1,66 @@
+# Most checks read quantities that no equation produces yet, so they report not_run for now.
+checks:
+  - id: mass_within_limit
+    label: 搭載機器の質量の合計が形状の上限以下である
+    block: mass
+    left: total_mass_kg
+    comparator: "<="
+    right: max_mass_kg
+    source: https://www.satcon.jp/contest/doc/1_boshu26.pdf
+    section: "6.1 (1) a"
+  - id: power_balance
+    label: 1 周回の発電量が消費量以上である
+    block: power
+    left: orbit_generated_energy_j
+    comparator: ">="
+    right: orbit_consumed_energy_j
+    source: https://www.satcon.jp/contest/doc/1_boshu26.pdf
+    section: "6.1 (3) 12)"
+  - id: heat_matches_power
+    label: 熱解析の発熱が電源の消費電力と一致する
+    block: thermal
+    left: heat_load_w
+    comparator: "=="
+    right: consumed_power_w
+    provisional: true
+    notes: A consistency rule of this project, not a clause of a standard.
+  - id: temperature_margin_positive
+    label: 搭載機器が許容温度に収まる
+    block: thermal
+    left: temperature_margin_k
+    comparator: ">="
+    right_value: 0
+    source: https://www.satcon.jp/contest/doc/1_boshu26.pdf
+    section: "6.1 (3) 11)"
+  - id: link_margin_positive
+    label: 回線マージンが 0 dB 以上である
+    block: communication
+    left: link_margin_db
+    comparator: ">="
+    right_value: 0
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-420C.pdf
+    section: （４）回線マージン
+  - id: margin_of_safety_positive
+    label: 安全余裕が負でない
+    block: structure
+    left: margin_of_safety_ratio
+    comparator: ">="
+    right_value: 0
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-320C.pdf
+    section: ４．３．２．２
+  - id: natural_frequency_meets_launcher
+    label: 固有振動数がロケットの要求以上である
+    block: structure
+    left: natural_frequency_hz
+    comparator: ">="
+    right: required_natural_frequency_hz
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-320C.pdf
+    section: ４．３．５
+  - id: orbit_lifetime_covers_mission
+    label: 軌道寿命がミッション期間以上である
+    block: orbit
+    left: orbit_lifetime_s
+    comparator: ">="
+    right: mission_duration_s
+    provisional: true
+    notes: A consistency rule of this project, not a clause of a standard.

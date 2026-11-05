@@ -1,0 +1,74 @@
+# Quantities that come from outside the equations. total_mass_kg becomes an equation output
+# once the parts catalog exists.
+inputs:
+  - key: altitude_m
+    label: 軌道高度
+  - key: inclination_deg
+    label: 軌道傾斜角
+  - key: max_mass_kg
+    label: 質量の上限
+  - key: total_mass_kg
+    label: 搭載機器の質量の合計
+
+# Named by checks already. Each one moves to `equations` when its block is built.
+planned_quantities:
+  - orbit_generated_energy_j
+  - orbit_consumed_energy_j
+  - heat_load_w
+  - consumed_power_w
+  - temperature_margin_k
+  - link_margin_db
+  - margin_of_safety_ratio
+  - natural_frequency_hz
+  - required_natural_frequency_hz
+  - orbit_lifetime_s
+  - mission_duration_s
+
+# Circular orbit only. The eclipse values are the worst case, with the Sun in the orbit plane.
+equations:
+  - output: orbit_radius_m
+    label: 軌道半径
+    formula: r = R + h
+    inputs: [altitude_m, earth_radius_m]
+    block: orbit
+    display_divisor: 1000
+    display_unit: km
+    source: https://ntrs.nasa.gov/api/citations/20205003902/downloads/Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf
+    section: p. 137
+  - output: orbit_period_s
+    label: 軌道周期
+    formula: T = 2π√(r³/μ)
+    inputs: [orbit_radius_m, earth_mu_m3s2]
+    block: orbit
+    display_divisor: 60
+    display_unit: 分
+    summary: true
+    source: https://ntrs.nasa.gov/api/citations/20205003902/downloads/Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf
+    section: pp. 91-93
+  - output: max_eclipse_fraction_ratio
+    label: 最大の日陰率
+    formula: f = asin(R/r)/π
+    inputs: [earth_radius_m, orbit_radius_m]
+    block: orbit
+    source: https://ntrs.nasa.gov/api/citations/20205003902/downloads/Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf
+    section: pp. 137-138, with beta = 0
+  - output: max_eclipse_s
+    label: 最大の日陰時間
+    formula: T_e = f T
+    inputs: [orbit_period_s, max_eclipse_fraction_ratio]
+    block: orbit
+    display_divisor: 60
+    display_unit: 分
+    summary: true
+    source: https://ntrs.nasa.gov/api/citations/20205003902/downloads/Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf
+    section: p. 138
+  - output: min_sunlight_s
+    label: 最小の日照時間
+    formula: T_s = T - T_e
+    inputs: [orbit_period_s, max_eclipse_s]
+    block: orbit
+    display_divisor: 60
+    display_unit: 分
+    summary: true
+    source: https://ntrs.nasa.gov/api/citations/20205003902/downloads/Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf
+    section: p. 139
