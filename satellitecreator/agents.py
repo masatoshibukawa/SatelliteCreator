@@ -103,7 +103,7 @@ class ClaudeThermalAgent:
         if rule_change is None:
             return None
         move = self._move(_prompt(project, ledger), history)
-        return self._apply(move, project) or rule_change
+        return self._apply(move, project, rule_change) or rule_change
 
     def _move(self, prompt: str, history: tuple[IterationRecord, ...]) -> ThermalMove | None:
         if prompt in self._answers:
@@ -135,22 +135,30 @@ class ClaudeThermalAgent:
         self.output_tokens += response.usage.output_tokens
         return response.parsed_output
 
-    def _apply(self, move: ThermalMove | None, project: Project) -> DesignChange | None:
+    def _apply(
+        self, move: ThermalMove | None, project: Project, rule_change: DesignChange
+    ) -> DesignChange | None:
+        """Accepts a move only if it answers the problem the rule agent diagnosed."""
         if move is None:
             return None
+        design = project.design
+        too_cold = rule_change.project.design.heater_power_w > design.heater_power_w
         message = AgentMessage(agent=_AGENT_NAME, text=move.reason[:_MAX_REASON_LENGTH])
-        if move.action == "surface":
-            names = {item.name for item in load_surface_finishes()}
+        if move.action == "surface" and not too_cold:
+            usable = {
+                item.name for item in load_surface_finishes() if item.absorptivity < item.emissivity
+            }
+            current_ratio = design.radiator_ratio if design.surface else 0.0
             ratio = move.radiator_ratio
-            if move.surface not in names or ratio is None or not 0 < ratio <= 1:
+            if move.surface not in usable or ratio is None or not current_ratio < ratio <= 1:
                 return None
             return DesignChange(
                 message=message,
                 project=with_design(project, surface=move.surface, radiator_ratio=ratio),
             )
-        if move.action == "heater":
+        if move.action == "heater" and too_cold:
             power_w = move.heater_power_w
-            if power_w is None or not project.design.heater_power_w < power_w <= MAX_HEATER_W:
+            if power_w is None or not design.heater_power_w < power_w <= MAX_HEATER_W:
                 return None
             return DesignChange(
                 message=message, project=with_design(project, heater_power_w=power_w)

@@ -126,3 +126,12 @@ def test_requirement_of_the_launch_vehicle_reaches_the_ledger():
     ledger = project_ledger(build_intake(PROMPT, {}).project)
 
     assert ledger.value("required_natural_frequency_hz") == 100
+
+
+def test_sun_pointing_is_flagged_as_missing_from_the_thermal_result():
+    ledger = project_ledger(build_intake(PROMPT, {}).project)
+
+    statuses = {item.block: item for item in block_statuses(ledger, "sun_pointing")}
+
+    assert "未反映" in statuses[Block.THERMAL].note
+    assert "未反映" not in statuses[Block.MASS].note

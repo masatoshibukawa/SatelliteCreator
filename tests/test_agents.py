@@ -91,6 +91,52 @@ def test_request_stays_small_and_cheap():
     assert len(call["messages"][0]["content"]) < 500
 
 
+def _cold_project():
+    project = build_intake(BASE, {}).project
+    return project.model_copy(
+        update={
+            "design": project.design.model_copy(
+                update={"surface": "カプトン", "radiator_ratio": 1.0}
+            )
+        }
+    )
+
+
+def test_heater_move_above_the_limit_is_refused():
+    cold = _cold_project()
+
+    change = ClaudeThermalAgent(FakeClient(_heater(99.0))).review(cold, project_ledger(cold), ())
+
+    assert change.message.agent == "熱"
+
+
+def test_surface_move_is_refused_for_a_cold_problem():
+    cold = _cold_project()
+
+    change = ClaudeThermalAgent(FakeClient(_surface("黒塗り"))).review(
+        cold, project_ledger(cold), ()
+    )
+
+    assert change.message.agent == "熱"
+
+
+def test_radiator_cannot_shrink_on_a_hot_problem():
+    project = build_intake(HOT, {}).project
+    partly = project.model_copy(
+        update={
+            "design": project.design.model_copy(
+                update={"surface": "カプトン", "radiator_ratio": 0.1}
+            )
+        }
+    )
+
+    change = ClaudeThermalAgent(FakeClient(_surface("カプトン", 0.05))).review(
+        partly, project_ledger(partly), ()
+    )
+
+    assert change.message.agent == "熱"
+
+
 def test_heater_move_is_applied():
     project = build_intake(BASE, {}).project
     cold = project.model_copy(
@@ -110,6 +156,8 @@ def test_heater_move_is_applied():
     "move",
     [
         _surface("金メッキ"),
+        _surface("アルミ"),
+        _heater(3.0),
         _surface(None),
         _heater(99.0),
         _heater(None),
