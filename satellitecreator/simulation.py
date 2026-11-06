@@ -28,6 +28,8 @@ _BLOCK_NOTES = {
     Block.ORBIT: "円軌道を仮定。日陰は太陽が軌道面にある最悪の場合",
     Block.MASS: "OPT-CUBE の機器構成を目安に使用",
     Block.POWER: "OPT-CUBE の機器構成を目安に使用。最短の日照で 1 周回の収支を計算",
+    Block.COMMUNICATION: "OPT-CUBE の S 帯 50 kbps を目安に使用。仰角が最低のときの最悪値",
+    Block.STRUCTURE: "4 本のレールを片持ち梁とした概算。解析書の FEM の代わりにはなりません",
     Block.THERMAL: (
         "衛星全体を 1 節点で計算。機器ごとの温度ではありません。"
         "高温は日陰最小と発熱最大、低温は日陰最大と発熱最小の場合"
@@ -40,6 +42,8 @@ _NEEDS_BUS_NOTE = "機器構成が必要です。今は 3U だけ登録してい
 _WAITING_NOTES = {
     Block.MASS: _NEEDS_BUS_NOTE,
     Block.POWER: _NEEDS_BUS_NOTE,
+    Block.COMMUNICATION: _NEEDS_BUS_NOTE,
+    Block.STRUCTURE: _NEEDS_BUS_NOTE,
     Block.THERMAL: _NEEDS_BUS_NOTE,
 }
 
@@ -72,7 +76,20 @@ def _bus_inputs(bus: ReferenceBus, design: SatelliteDesign) -> dict[str, float]:
     finish = None if design.surface is None else surface_finish(design.surface)
     absorptivity = finish.absorptivity if finish else bus.surface_absorptivity
     emissivity = finish.emissivity if finish else bus.surface_emissivity
+    link = bus.link
     return {
+        "downlink_frequency_hz": link.frequency_hz,
+        "downlink_rate_bps": link.rate_bps,
+        "transmit_power_db": link.transmit_power_db,
+        "transmit_feed_loss_db": link.transmit_feed_loss_db,
+        "transmit_antenna_gain_db": link.transmit_antenna_gain_db,
+        "pointing_loss_db": link.pointing_loss_db,
+        "receive_antenna_gain_db": link.receive_antenna_gain_db,
+        "receive_feed_loss_db": link.receive_feed_loss_db,
+        "noise_density_db": link.noise_density_db,
+        "other_loss_db": link.other_loss_db,
+        "required_ebno_db": link.required_ebno_db,
+        "min_elevation_deg": link.min_elevation_deg,
         "parts_mass_kg": bus.parts_mass_kg,
         "mass_margin_kg": bus.mass_margin_kg,
         "max_consumed_power_w": design.peak_power_w or bus.max_consumed_power_w,

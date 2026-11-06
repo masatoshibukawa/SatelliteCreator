@@ -5,7 +5,7 @@ reference_buses:
   - form_factor: 3U
     name: OPT-CUBE の機器構成
     source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
-    section: pp. 12, 16, 17, 19
+    section: pp. 12, 16, 17, 19, 24
     mass_margin_g: 102.87
     min_consumed_power_mw: 1229
     max_consumed_power_mw: 12586
@@ -13,6 +13,20 @@ reference_buses:
     surface_emissivity: 0.80
     allowable_min_c: -10
     allowable_max_c: 50
+    # S-band downlink D-S4 of 表 39 (p. 24): 50 kbps to the Tohoku station.
+    link:
+      frequency_hz: 2285000000
+      rate_bps: 50000
+      transmit_power_db: 20
+      transmit_feed_loss_db: 1
+      transmit_antenna_gain_db: 0
+      pointing_loss_db: 0.2
+      receive_antenna_gain_db: 32.2
+      receive_feed_loss_db: 1
+      noise_density_db: -174.6
+      other_loss_db: 1.5
+      required_ebno_db: 4.5
+      min_elevation_deg: 5
     battery_voltage_v: 9.6
     battery_capacity_mah: 2450
     charge_efficiency: 0.692

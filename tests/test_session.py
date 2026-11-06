@@ -92,7 +92,7 @@ def test_session_reports_the_simulation_of_each_block():
 
     assert states["orbit"] == "done"
     assert states["thermal"] == "done"
-    assert states["communication"] == "not_built"
+    assert states["communication"] == "done"
 
 
 def test_session_reports_the_consistency_checks():
@@ -101,7 +101,7 @@ def test_session_reports_the_consistency_checks():
     states = {item.id: item.state for item in result.checks}
 
     assert states["mass_within_limit"] == "passed"
-    assert states["link_margin_positive"] == "not_run"
+    assert states["orbit_lifetime_covers_mission"] == "not_run"
 
 
 def test_refused_request_runs_no_simulation():

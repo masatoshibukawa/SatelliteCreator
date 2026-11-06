@@ -48,3 +48,17 @@ constants:
     value: 900
     provisional: true
     notes: Stand-in close to aluminium, which is the main structural material.
+  - key: speed_of_light_mps
+    label: 光速
+    value: 299792458
+    source: https://physics.nist.gov/cgi-bin/cuu/Value?c
+  - key: rail_width_m
+    label: レールの幅
+    value: 0.0085
+    source: https://www.nasa.gov/wp-content/uploads/2018/01/cubesatdesignspecificationrev14_12022-02-09.pdf
+    section: 2.2.5
+  - key: aluminium_modulus_pa
+    label: アルミのヤング率
+    value: 7.0e10
+    provisional: true
+    notes: Typical value for aluminium alloys. Source still to be confirmed.

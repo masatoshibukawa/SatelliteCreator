@@ -26,6 +26,21 @@ class PowerMode(Frozen):
     hours: dict[str, float]
 
 
+class LinkBudget(Frozen):
+    frequency_hz: float = Field(gt=0)
+    rate_bps: float = Field(gt=0)
+    transmit_power_db: float
+    transmit_feed_loss_db: float
+    transmit_antenna_gain_db: float
+    pointing_loss_db: float
+    receive_antenna_gain_db: float
+    receive_feed_loss_db: float
+    noise_density_db: float
+    other_loss_db: float
+    required_ebno_db: float
+    min_elevation_deg: float
+
+
 class SurfaceFinish(Sourced):
     name: str
     absorptivity: float = Field(gt=0, le=1)
@@ -43,6 +58,7 @@ class ReferenceBus(Sourced):
     surface_emissivity: float = Field(gt=0, le=1)
     allowable_min_c: float
     allowable_max_c: float
+    link: LinkBudget
     battery_voltage_v: float = Field(gt=0)
     battery_capacity_mah: float = Field(gt=0)
     charge_efficiency: float = Field(gt=0, le=1)

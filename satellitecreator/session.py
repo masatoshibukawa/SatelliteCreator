@@ -12,6 +12,7 @@ from satellitecreator.agents import design_agents
 from satellitecreator.core.checks import CheckResult, evaluate_checks
 from satellitecreator.design import check_scope, envelope, form_factor
 from satellitecreator.document import Document, build_document
+from satellitecreator.flowdown import with_subsystem_requirements
 from satellitecreator.gates import evaluate_gate, pass_review
 from satellitecreator.intake import QuestionState, build_intake
 from satellitecreator.iteration import DesignLoopResult, run_design_loop
@@ -115,7 +116,7 @@ def run_session(prompt: str, answers: Mapping[str, str]) -> SessionResult:
         return SessionResult(refusal=refusal)
     intake = build_intake(prompt, answers)
     loop = run_design_loop(intake.project, agents=design_agents())
-    project = loop.project
+    project = with_subsystem_requirements(loop.project)
     ledger = project_ledger(project)
     return SessionResult(
         questions=intake.questions,

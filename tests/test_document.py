@@ -79,7 +79,7 @@ def test_mission_analysis_shows_the_calculated_orbit_with_its_equation():
     assert section.state is SectionState.PARTIAL
     assert any("軌道周期: 92.6 分" in line and "T = 2π" in line for line in section.lines)
     assert any(line.startswith("最大の日陰時間: 36.1 分") for line in section.lines)
-    assert "未計算" in section.pending_note or "電力" in section.pending_note
+    assert "円軌道" in section.pending_note
 
 
 def test_stand_in_note_appears_only_when_mass_and_thermal_were_calculated():
@@ -144,7 +144,7 @@ def test_checklist_marks_only_what_the_project_actually_has():
     document = build_document(build_intake(PROMPT, {}).project)
 
     assert _item(document, 1).state is SectionState.PARTIAL
-    assert _item(document, 8).state is SectionState.PENDING
+    assert _item(document, 2).state is SectionState.PENDING
 
 
 def test_checklist_credits_mass_and_temperature_only_when_they_are_calculated():

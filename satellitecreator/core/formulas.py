@@ -312,6 +312,70 @@ def battery_depth_of_discharge_ratio(
     return (average_consumed_power_w + heater_power_w) * max_eclipse_s / battery_capacity_j
 
 
+def slant_range_m(earth_radius_m: float, orbit_radius_m: float, min_elevation_deg: float) -> float:
+    elevation_rad = math.radians(min_elevation_deg)
+    return math.sqrt(
+        orbit_radius_m**2 - (earth_radius_m * math.cos(elevation_rad)) ** 2
+    ) - earth_radius_m * math.sin(elevation_rad)
+
+
+def free_space_loss_db(
+    slant_range_m: float, downlink_frequency_hz: float, speed_of_light_mps: float
+) -> float:
+    return 20 * math.log10(4 * math.pi * slant_range_m * downlink_frequency_hz / speed_of_light_mps)
+
+
+def carrier_to_noise_density_db(
+    transmit_power_db: float,
+    transmit_feed_loss_db: float,
+    transmit_antenna_gain_db: float,
+    free_space_loss_db: float,
+    pointing_loss_db: float,
+    receive_antenna_gain_db: float,
+    receive_feed_loss_db: float,
+    noise_density_db: float,
+) -> float:
+    received_db = (
+        transmit_power_db
+        - transmit_feed_loss_db
+        + transmit_antenna_gain_db
+        - free_space_loss_db
+        - pointing_loss_db
+        + receive_antenna_gain_db
+        - receive_feed_loss_db
+    )
+    return received_db - noise_density_db
+
+
+def link_margin_db(
+    carrier_to_noise_density_db: float,
+    other_loss_db: float,
+    required_ebno_db: float,
+    downlink_rate_bps: float,
+) -> float:
+    return (
+        carrier_to_noise_density_db
+        - other_loss_db
+        - required_ebno_db
+        - 10 * math.log10(downlink_rate_bps)
+    )
+
+
+def rail_bending_inertia_m4(envelope_depth_m: float, rail_width_m: float) -> float:
+    offset_m = (envelope_depth_m - rail_width_m) / 2
+    return 4 * (rail_width_m**4 / 12 + rail_width_m**2 * offset_m**2)
+
+
+def natural_frequency_hz(
+    aluminium_modulus_pa: float,
+    rail_bending_inertia_m4: float,
+    total_mass_kg: float,
+    envelope_length_m: float,
+) -> float:
+    stiffness = 3 * aluminium_modulus_pa * rail_bending_inertia_m4 / envelope_length_m**3
+    return math.sqrt(stiffness / total_mass_kg) / (2 * math.pi)
+
+
 FORMULAS: dict[str, Callable[..., float]] = {
     function.__name__: function
     for function in (
@@ -340,5 +404,11 @@ FORMULAS: dict[str, Callable[..., float]] = {
         orbit_generated_energy_j,
         orbit_consumed_energy_j,
         battery_depth_of_discharge_ratio,
+        slant_range_m,
+        free_space_loss_db,
+        carrier_to_noise_density_db,
+        link_margin_db,
+        rail_bending_inertia_m4,
+        natural_frequency_hz,
     )
 }

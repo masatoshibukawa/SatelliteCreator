@@ -16,6 +16,7 @@ NonBlankText = Annotated[str, StringConstraints(strip_whitespace=True, min_lengt
 UNIT_SUFFIXES = (
     "_m",
     "_m2",
+    "_m4",
     "_m3s2",
     "_kg",
     "_s",
@@ -28,6 +29,7 @@ UNIT_SUFFIXES = (
     "_k",
     "_deg",
     "_hz",
+    "_mps",
     "_bps",
     "_bit",
     "_db",

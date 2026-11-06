@@ -34,6 +34,30 @@ inputs:
     label: バッテリのエネルギー
   - key: allowable_depth_of_discharge_ratio
     label: 許容放電深度
+  - key: downlink_frequency_hz
+    label: ダウンリンク周波数
+  - key: downlink_rate_bps
+    label: ダウンリンク速度
+  - key: transmit_power_db
+    label: 送信電力（dBm）
+  - key: transmit_feed_loss_db
+    label: 送信フィーダ損失
+  - key: transmit_antenna_gain_db
+    label: 送信アンテナ利得
+  - key: pointing_loss_db
+    label: ポインティング損失
+  - key: receive_antenna_gain_db
+    label: 受信アンテナ利得
+  - key: receive_feed_loss_db
+    label: 受信フィーダ損失
+  - key: noise_density_db
+    label: 雑音電力密度（dBm/Hz）
+  - key: other_loss_db
+    label: その他の損失
+  - key: required_ebno_db
+    label: 所要 Eb/N0
+  - key: min_elevation_deg
+    label: 最低仰角
   - key: surface_absorptivity_ratio
     label: 表面の太陽光吸収率
   - key: surface_emissivity_ratio
@@ -45,9 +69,7 @@ inputs:
 
 # Named by checks already. Each one moves to `equations` when its block is built.
 planned_quantities:
-  - link_margin_db
   - margin_of_safety_ratio
-  - natural_frequency_hz
   - orbit_lifetime_s
   - mission_duration_s
 
@@ -261,3 +283,54 @@ equations:
     summary: true
     source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-214A.pdf
     section: （54）放電深度
+
+  # Communication: Eb/N0 of the CubeSat survey, arranged as the budget in OPT-CUBE 表 39.
+  - output: slant_range_m
+    label: 最大通信距離
+    formula: d = √(r² - R²cos²ε) - R sin ε
+    inputs: [earth_radius_m, orbit_radius_m, min_elevation_deg]
+    block: communication
+    display_divisor: 1000
+    display_unit: km
+    source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
+    section: p. 24, 表 39
+  - output: free_space_loss_db
+    label: 自由空間損失
+    formula: L = 20 log(4πdf/c)
+    inputs: [slant_range_m, downlink_frequency_hz, speed_of_light_mps]
+    block: communication
+    source: https://arxiv.org/pdf/1908.09501
+    section: Section on the link budget
+  - output: carrier_to_noise_density_db
+    label: C/N0
+    formula: C/N0 = EIRP - L + G_r - N0
+    inputs: [transmit_power_db, transmit_feed_loss_db, transmit_antenna_gain_db, free_space_loss_db, pointing_loss_db, receive_antenna_gain_db, receive_feed_loss_db, noise_density_db]
+    block: communication
+    source: https://arxiv.org/pdf/1908.09501
+    section: Eq. (21)
+  - output: link_margin_db
+    label: 回線マージン
+    formula: M = C/N0 - L_o - Eb/N0 - 10 log R
+    inputs: [carrier_to_noise_density_db, other_loss_db, required_ebno_db, downlink_rate_bps]
+    block: communication
+    display_unit: dB
+    summary: true
+    source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
+    section: p. 24, 表 39
+
+  # Structure, kept light by the owner's decision: the four rails as one cantilever.
+  - output: rail_bending_inertia_m4
+    label: レールの断面二次モーメント
+    formula: I = 4(a⁴/12 + a²y²)
+    inputs: [envelope_depth_m, rail_width_m]
+    block: structure
+    provisional: true
+  - output: natural_frequency_hz
+    label: 固有振動数の概算
+    formula: f = √(3EI/(mL³))/2π
+    inputs: [aluminium_modulus_pa, rail_bending_inertia_m4, total_mass_kg, envelope_length_m]
+    block: structure
+    display_unit: Hz
+    display_digits: 0
+    summary: true
+    provisional: true

@@ -1,13 +1,14 @@
 """Deterministic review gates.
 
 A gate re-runs the rules of every earlier review, so a change made after a review cannot slip
-through a later one. A review with no rules yet fails closed instead of passing silently.
+through a later one. PDR and CDR read the design core, so they cannot pass on paperwork alone.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 
+from satellitecreator.core.checks import CheckState, evaluate_checks
 from satellitecreator.design import check_scope
 from satellitecreator.process import Review, review_order
 from satellitecreator.project import Project, SuccessLevel
@@ -18,6 +19,7 @@ from satellitecreator.requirements import (
     RequirementStatus,
 )
 from satellitecreator.schema import Finding, Frozen
+from satellitecreator.simulation import BlockState, block_statuses, project_ledger
 
 Rule = Callable[[Project], tuple[Finding, ...]]
 
@@ -148,17 +150,29 @@ def _design_in_scope(project: Project) -> tuple[Finding, ...]:
     return check_scope(project.design)
 
 
-def _checks_undefined(review: Review) -> Rule:
-    def rule(project: Project) -> tuple[Finding, ...]:
-        return (
-            Finding(
-                code="checks_undefined",
-                message="この審査の判定はまだ定義されていません",
-                subject=review,
-            ),
-        )
+def _analysis_passed(project: Project) -> tuple[Finding, ...]:
+    """PDR: every block is calculated and no check that ran has failed."""
+    ledger = project_ledger(project)
+    missing = tuple(
+        Finding(code="analysis_missing", message="解析の結果がありません", subject=item.block)
+        for item in block_statuses(ledger)
+        if item.state is not BlockState.DONE
+    )
+    failed = tuple(
+        Finding(code="check_failed", message=f"不合格です: {item.label}", subject=item.id)
+        for item in evaluate_checks(ledger)
+        if item.state is CheckState.FAILED
+    )
+    return missing + failed
 
-    return rule
+
+def _all_checks_ran(project: Project) -> tuple[Finding, ...]:
+    """CDR: nothing may be left unchecked."""
+    return tuple(
+        Finding(code="check_not_run", message=f"未実行です: {item.label}", subject=item.id)
+        for item in evaluate_checks(project_ledger(project))
+        if item.state is CheckState.NOT_RUN
+    )
 
 
 _RULES: dict[Review, tuple[Rule, ...]] = {
@@ -190,8 +204,8 @@ _RULES: dict[Review, tuple[Rule, ...]] = {
         ),
         _design_in_scope,
     ),
-    Review.PDR: (_checks_undefined(Review.PDR),),
-    Review.CDR: (_checks_undefined(Review.CDR),),
+    Review.PDR: (_analysis_passed,),
+    Review.CDR: (_all_checks_ran,),
 }
 
 

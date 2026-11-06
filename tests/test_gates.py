@@ -367,7 +367,7 @@ def test_change_made_after_an_earlier_review_blocks_the_next_gate(overrides, cod
     assert code in _codes(_project_ready_for_sdr(**overrides), Review.SDR)
 
 
-def test_gates_without_defined_checks_still_rerun_earlier_rules():
+def test_analysis_gates_still_rerun_earlier_rules():
     project = _project_ready_for_sdr(
         operations_concept="", passed_reviews=(Review.MDR, Review.SRR, Review.SDR)
     )
@@ -391,17 +391,6 @@ def test_blank_operations_concept_does_not_count():
 def test_mission_definition_rejects_blank_text(fields):
     with pytest.raises(ValidationError):
         MissionDefinition(**fields)
-
-
-@pytest.mark.parametrize("review", [Review.PDR, Review.CDR])
-def test_gates_without_defined_checks_fail_closed(review):
-    passed = (Review.MDR, Review.SRR, Review.SDR, Review.PDR)
-    project = _project_ready_for_sdr(passed_reviews=passed[: 3 if review is Review.PDR else 4])
-
-    result = evaluate_gate(project, review)
-
-    assert not result.passed
-    assert "checks_undefined" in {finding.code for finding in result.findings}
 
 
 def test_pass_review_returns_a_new_project_and_leaves_the_original_unchanged():
