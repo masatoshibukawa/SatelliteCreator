@@ -19,6 +19,31 @@ export function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+const VIEW_DIRECTION = new THREE.Vector3(1, 0.55, 1.3).normalize();
+
+export function fitToView(stage: Stage, model: THREE.Object3D, direction = VIEW_DIRECTION): void {
+  const box = new THREE.Box3().setFromObject(model);
+  const center = box.getCenter(new THREE.Vector3());
+  const radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 1e-3);
+  // The margin keeps the model clear of the overlays at the top and bottom of the view.
+  const distance = (radius / Math.sin((stage.camera.fov * Math.PI) / 360)) * 1.5;
+  stage.camera.position.copy(center).addScaledVector(direction, distance);
+  stage.camera.near = distance / 100;
+  stage.camera.far = distance * 20;
+  stage.camera.updateProjectionMatrix();
+  stage.controls.target.copy(center);
+  stage.controls.minDistance = radius * 0.8;
+  stage.controls.maxDistance = distance * 4;
+  stage.controls.update();
+}
+
+export function addStudioLight(stage: Stage): void {
+  stage.scene.add(new THREE.HemisphereLight(0xffffff, 0x8a94a6, 1.5));
+  const sun = new THREE.DirectionalLight(0xffffff, 2);
+  sun.position.set(1, 2, 1.5);
+  stage.scene.add(sun);
+}
+
 function createStage(host: HTMLDivElement): Stage {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));

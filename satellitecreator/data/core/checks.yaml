@@ -8,6 +8,14 @@ checks:
     right: max_mass_kg
     source: https://www.satcon.jp/contest/doc/1_boshu26.pdf
     section: "6.1 (1) a"
+  - id: equipment_fits_inside
+    label: 搭載機器が内部の長さに収まる
+    block: structure
+    left: equipment_stack_height_m
+    comparator: "<="
+    right: internal_length_m
+    provisional: true
+    notes: Equipment sizes are stand-ins, so this only flags a clear misfit.
   - id: power_balance
     label: 1 周回の発電量が消費量以上である
     block: power

@@ -8,6 +8,7 @@ from satellitecreator.core.registry import Block, Equation, load_equations
 from satellitecreator.equipment import equipment_effect, load_equipment, selected_options
 from satellitecreator.requirements import Function
 from satellitecreator.simulation import format_entry
+from satellitecreator.timeline import Timeline
 
 _RESULT_BLOCKS = {
     Block.ORBIT: Function.ORBIT,
@@ -46,6 +47,16 @@ def subsystem_result_lines(ledger: Ledger, labels: dict[Function, str]) -> tuple
         for block, function in _RESULT_BLOCKS.items()
         for item in load_equations()
         if item.block is block and item.summary and ledger.get(item.output) is not None
+    )
+
+
+def contact_lines(timeline: Timeline | None) -> tuple[str, ...]:
+    if timeline is None:
+        return ()
+    return (
+        f"{timeline.station}との通信: 1 日 {len(timeline.contacts)} 回、"
+        f"合計 {timeline.contact_s / 60:.0f} 分（暫定）",
+        f"1 日のダウンリンク量: {timeline.downlink_bit / 8e6:.1f} MB（暫定）",
     )
 
 

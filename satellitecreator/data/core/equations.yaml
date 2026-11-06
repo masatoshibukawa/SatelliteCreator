@@ -1,5 +1,7 @@
 # Quantities that come from outside the equations.
 inputs:
+  - {key: equipment_stack_height_m, label: 搭載機器の積み上げ高さ}
+  - {key: internal_length_m, label: 内部の長さ}
   - key: altitude_m
     label: 軌道高度
   - key: inclination_deg

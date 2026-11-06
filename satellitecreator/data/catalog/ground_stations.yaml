@@ -1,0 +1,6 @@
+# The station used for contact times. OPT-CUBE downlinks to Tohoku; the coordinates are rounded.
+ground_station:
+  name: 東北大学の地上局
+  latitude_deg: 38.26
+  longitude_deg: 140.84
+  provisional: true

@@ -19,6 +19,7 @@ from satellitecreator.design import (
     load_launch_vehicle,
 )
 from satellitecreator.document_results import (
+    contact_lines,
     equipment_lines,
     ground_link_lines,
     subsystem_result_lines,
@@ -27,6 +28,7 @@ from satellitecreator.project import Project, SuccessLevel
 from satellitecreator.requirements import Function, RequirementLevel, RequirementStatus
 from satellitecreator.schema import Frozen
 from satellitecreator.simulation import format_entry, project_ledger
+from satellitecreator.timeline import project_timeline
 
 _SUBSYSTEM_LABELS = {
     Function.ORBIT: "軌道",
@@ -173,7 +175,7 @@ def _system_section(project: Project) -> Section:
     equipment = equipment_lines(bus, design.equipment) if bus else ()
     lines = (*lines, *choices, *equipment)
     out_of_scope = "、".join(item.message for item in check_scope(design))
-    missing = "機器の寸法と配置は未検討です" if bus else "搭載機器と質量配分は未計算です"
+    missing = "機器の寸法と配置は説明用の暫定値です" if bus else "搭載機器と質量配分は未計算です"
     note = out_of_scope or missing
     return Section(
         number="5.1", title=title, state=SectionState.PARTIAL, lines=lines, pending_note=note
@@ -224,12 +226,12 @@ def _ground_section(project: Project, ledger: Ledger) -> Section:
     bus = reference_bus(project.design.form_factor) if project.design else None
     if bus is None or ledger.get("link_margin_db") is None:
         return _pending("5.4", title, "機器構成と軌道が決まると記載されます")
-    note = "地上局の条件は公開資料の値を目安にしています。可視時間とデータ量は未計算です"
+    note = "地上局の条件は公開資料の値を目安にしています。通信時間は 1 日の模擬の結果です"
     return Section(
         number="5.4",
         title=title,
         state=SectionState.PARTIAL,
-        lines=ground_link_lines(bus, ledger),
+        lines=(*ground_link_lines(bus, ledger), *contact_lines(project_timeline(project, ledger))),
         pending_note=note,
     )
 

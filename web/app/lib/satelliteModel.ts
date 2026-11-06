@@ -54,7 +54,11 @@ export function buildSatelliteModel(satellite: SatelliteView, equipment: readonl
   for (let index = 1; index < units; index += 1) {
     group.add(unitRing(width, depth, -length / 2 + (length * index) / units));
   }
-  group.add(...buildEquipment({ width, depth, length }, equipment));
+  // The mission end is -Z, as in the OPT-CUBE layout, so the equipment model is turned over.
+  const fitted = new THREE.Group();
+  fitted.rotation.z = Math.PI;
+  fitted.add(...buildEquipment({ width, depth, length }, equipment));
+  group.add(fitted);
   return group;
 }
 

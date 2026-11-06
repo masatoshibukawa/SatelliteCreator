@@ -6,31 +6,13 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { buildSatelliteModel, disposeGroup } from "../lib/satelliteModel";
 import type { EquipmentCategory, SatelliteView } from "../lib/types";
-import { prefersReducedMotion, useThreeStage, type Stage } from "../lib/useThreeStage";
+import { addStudioLight, fitToView, prefersReducedMotion, useThreeStage, type Stage } from "../lib/useThreeStage";
 
-const VIEW_DIRECTION = new THREE.Vector3(1, 0.55, 1.3).normalize();
-
-function fitToView(stage: Stage, model: THREE.Object3D): void {
-  const box = new THREE.Box3().setFromObject(model);
-  const center = box.getCenter(new THREE.Vector3());
-  const radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 1e-3);
-  // The margin keeps the model clear of the overlays at the top and bottom of the view.
-  const distance = (radius / Math.sin((stage.camera.fov * Math.PI) / 360)) * 1.5;
-  stage.camera.position.copy(center).addScaledVector(VIEW_DIRECTION, distance);
-  stage.camera.near = distance / 100;
-  stage.camera.far = distance * 20;
-  stage.camera.updateProjectionMatrix();
-  stage.controls.target.copy(center);
-  stage.controls.minDistance = radius * 0.8;
-  stage.controls.maxDistance = distance * 4;
-  stage.controls.update();
-}
+/** From slightly below, because the mission equipment sits at the -Z end. */
+const MISSION_END_VIEW = new THREE.Vector3(1, -0.55, 1.3).normalize();
 
 function lightScene(stage: Stage): void {
-  stage.scene.add(new THREE.HemisphereLight(0xffffff, 0x8a94a6, 1.5));
-  const sun = new THREE.DirectionalLight(0xffffff, 2);
-  sun.position.set(1, 2, 1.5);
-  stage.scene.add(sun);
+  addStudioLight(stage);
   stage.controls.autoRotate = !prefersReducedMotion();
   stage.controls.autoRotateSpeed = 1;
 }
@@ -55,7 +37,7 @@ export default function SatelliteViewer({ satellite, equipment }: SatelliteViewe
     if (stage === null || satellite === null) return;
     const model = buildSatelliteModel(satellite, selectedKey === "" ? [] : selectedKey.split(","));
     stage.scene.add(model);
-    fitToView(stage, model);
+    fitToView(stage, model, MISSION_END_VIEW);
     return () => {
       stage.scene.remove(model);
       disposeGroup(model);

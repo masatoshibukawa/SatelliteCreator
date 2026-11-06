@@ -449,6 +449,82 @@ textarea {
   color: var(--bad);
 }
 
+.layout-view {
+  flex: 1;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.layout-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.layout-body {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid #59616e;
+  border-radius: 4px;
+}
+
+.layout-slot {
+  flex-basis: 0;
+  flex-shrink: 0;
+  min-height: 26px;
+  padding: 0 8px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--panel-2);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.layout-slot[aria-pressed="true"] {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.layout-free {
+  flex-basis: 0;
+  flex-shrink: 0;
+  min-height: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.layout-axis {
+  color: var(--muted);
+}
+
+.layout-info {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 96px;
+}
+
+.timeline {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .simulation {
   flex: 1;
   display: flex;
@@ -695,6 +771,17 @@ textarea {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
     grid-auto-rows: 340px;
+  }
+
+  .layout-view {
+    flex: none;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 320px minmax(320px, auto) auto;
+  }
+
+  .timeline {
+    flex: none;
+    height: 520px;
   }
 
   .reviews {

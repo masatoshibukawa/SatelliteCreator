@@ -20,12 +20,14 @@ from satellitecreator.gates import evaluate_gate, pass_review
 from satellitecreator.intake import QuestionState, build_intake
 from satellitecreator.iteration import DesignLoopResult, run_design_loop
 from satellitecreator.launch_request import LaunchRequest, build_launch_request
+from satellitecreator.layout import SatelliteLayout, build_layout
 from satellitecreator.process import Phase, Review, load_review_specs
 from satellitecreator.project import Project
 from satellitecreator.quantify import draft_answers, requirement_reader
 from satellitecreator.requirements import Requirement
 from satellitecreator.schema import Finding, Frozen
 from satellitecreator.simulation import BlockStatus, block_statuses, project_ledger
+from satellitecreator.timeline import Timeline, project_timeline
 
 _REFUSED_TERMS = (
     "兵器",
@@ -91,6 +93,9 @@ class SessionResult(Frozen):
     satellite: SatelliteView | None = None
     equipment: tuple[EquipmentCategoryView, ...] = ()
     diagrams: DiagramData = DiagramData()
+    layout: SatelliteLayout | None = None
+    layout_fits: bool = True
+    timeline: Timeline | None = None
     scope_findings: tuple[Finding, ...] = ()
     document: Document | None = None
     launch_request: LaunchRequest | None = None
@@ -168,6 +173,11 @@ def _equipment_views(
     )
 
 
+def _project_layout(project: Project) -> SatelliteLayout | None:
+    bus = reference_bus(project.design.form_factor) if project.design else None
+    return build_layout(project.design, bus) if bus else None
+
+
 def _with_claude_assumptions(
     prompt: str, answers: Mapping[str, str]
 ) -> tuple[Mapping[str, str], dict[str, str]]:
@@ -196,6 +206,7 @@ def run_session(
     loop = run_design_loop(intake.project, agents=design_agents())
     project = with_subsystem_requirements(loop.project)
     ledger = project_ledger(project)
+    layout = _project_layout(project)
     return SessionResult(
         questions=intake.questions,
         requirements=project.requirements,
@@ -207,6 +218,9 @@ def run_session(
         satellite=_satellite_view(intake.form_factor),
         equipment=_equipment_views(intake.form_factor, equipment),
         diagrams=diagram_data(ledger),
+        layout=layout,
+        layout_fits=layout.fits if layout else True,
+        timeline=project_timeline(project, ledger),
         scope_findings=check_scope(project.design) if project.design else (),
         document=build_document(project),
         launch_request=build_launch_request(project),

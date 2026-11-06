@@ -1,0 +1,46 @@
+# Where equipment sits inside the satellite. Rough drawing values the owner accepted: every size
+# is provisional. The 3U order follows the OPT-CUBE report (Part 1 to 3, from +Z to -Z); only the
+# MOT size (about 1U, 83 x 83 x 100 mm) comes from that report. `category` names the equipment
+# choice that replaces the part. A part with a `face` sits outside the body, moved by `offset_mm`.
+internal_length_mm: {1U: 95, 3U: 295}
+stacks:
+  1U: [radio, cdh, batteries, magnets, camera]
+  3U: [ABU, TBU, GPS-R, GAS, MTQ, ACU, BAT, LTS, SCC, MOT]
+external:
+  1U: [solar-panels, antennas]
+  3U: [SCP, DSAP, DM, SANT, UANT, GPS-ANT]
+parts:
+  radio: {label: 無線機, role: 地上局とテレメトリやコマンドを送受信します, category: communication, size_mm: [85, 85, 14]}
+  cdh: {label: データ処理基板, role: 衛星全体を管理し、データを処理して保存します, size_mm: [85, 85, 12]}
+  batteries: {label: バッテリ, role: 日陰で電力を供給し、日照で充電します, size_mm: [85, 85, 22]}
+  magnets: {label: 磁気姿勢制御, role: 地磁気を使って衛星の向きを整えます, category: attitude, size_mm: [85, 85, 10]}
+  camera: {label: カメラ, role: ミッションの撮影を行います, category: payload, size_mm: [60, 60, 20]}
+  solar-panels: {label: 太陽電池パネル, role: 太陽光で発電します, category: solar, face: side, size_mm: [2, 85, 85]}
+  antennas: {label: アンテナ, role: 地上局と電波を送受信します, category: communication, face: top, size_mm: [40, 40, 3]}
+  ABU: {label: バス機器（ABU）, role: 電源管理と通信の機能を持つバスユニットで、システム管理の頂点です, category: communication, size_mm: [85, 85, 28]}
+  TBU: {label: データ処理機器（TBU）, role: 東北大学が設計したデータ処理ユニットです, category: communication, size_mm: [85, 85, 18]}
+  GPS-R: {label: GPS 受信機, role: 衛星の位置を測ります, category: attitude, size_mm: [70, 50, 8]}
+  GAS: {label: 姿勢系機器（GAS）, role: 姿勢制御系の機器です, category: attitude, size_mm: [40, 40, 8]}
+  MTQ: {label: 磁気トルカ, role: 地磁気を使って衛星の向きを変えます, category: attitude, size_mm: [85, 85, 16]}
+  ACU: {label: 姿勢制御機器（ACU）, role: 姿勢制御を担う東北大学設計の機器です, category: attitude, size_mm: [85, 85, 36]}
+  BAT: {label: バッテリ, role: 日陰で電力を供給し、日照で充電します, size_mm: [85, 85, 32]}
+  LTS: {label: レーザ追尾センサ, role: 地上局のレーザを捉えて高精度に姿勢を決めます, category: payload, size_mm: [40, 40, 12]}
+  SCC: {label: カメラ（SCC）, role: 地球を撮影します, category: payload, size_mm: [40, 40, 15]}
+  MOT: {label: 光通信機（MOT）, role: 二次元駆動ミラーでレーザを地上局へ向けるミッション機器です, category: payload, size_mm: [83, 83, 100]}
+  SCP: {label: 太陽電池セル, role: 太陽光で発電します, category: solar, face: side, size_mm: [2, 85, 280]}
+  DSAP: {label: 展開太陽電池パドル, role: 軌道上で開いて発電面積を増やします, category: solar, face: opposite, size_mm: [2, 85, 280]}
+  DM: {label: 展開機構, role: パドルを軌道上で開きます, category: solar, face: side, offset_mm: [4, 0, 150], size_mm: [8, 20, 20]}
+  SANT: {label: S 帯アンテナ, role: ミッションデータを S 帯で地上へ送ります, category: communication, face: top, size_mm: [40, 40, 3]}
+  UANT: {label: UHF アンテナ, role: テレメトリとコマンドを UHF で送受信します, category: communication, face: bottom, size_mm: [40, 40, 3]}
+  GPS-ANT: {label: GPS アンテナ, role: GPS 衛星の信号を受けます, category: attitude, face: top, offset_mm: [30, 30, 0], size_mm: [25, 25, 6]}
+options:
+  camera_small: {role: 地球を撮影します, size_mm: [60, 60, 20]}
+  camera_large: {role: 望遠鏡で地表を高い分解能で撮影します, size_mm: [76, 76, 90]}
+  atmosphere_sensor: {role: 軌道上の大気を測ります, size_mm: [60, 60, 30]}
+  optical_terminal: {role: レーザで地上局と通信します, size_mm: [83, 83, 100]}
+  body_cells: {role: 胴体の面で発電します, face: side, size_mm: [2, 85, 85]}
+  deployed_panels: {role: 軌道上で開くパネルで発電面積を増やします, face: side, size_mm: [2, 85, 85]}
+  uhf_radio: {role: UHF でテレメトリとコマンドを送受信します, size_mm: [85, 85, 14]}
+  s_band_radio: {role: S 帯でミッションデータを送ります, size_mm: [85, 85, 46]}
+  magnetorquer: {role: 地磁気を使って衛星の向きを変えます, size_mm: [85, 85, 10]}
+  reaction_wheels: {role: ホイールの回転で衛星の向きを精密に変えます, size_mm: [85, 85, 36]}

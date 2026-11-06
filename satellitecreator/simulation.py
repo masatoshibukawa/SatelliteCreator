@@ -14,6 +14,7 @@ from satellitecreator.design import (
     load_launch_vehicle,
 )
 from satellitecreator.equipment import equipment_effect
+from satellitecreator.layout import internal_length_mm, stack_height_mm
 from satellitecreator.project import Project
 from satellitecreator.schema import Frozen
 
@@ -101,6 +102,8 @@ def _bus_inputs(bus: ReferenceBus, design: SatelliteDesign) -> dict[str, float]:
         "required_ebno_db": link.required_ebno_db,
         "min_elevation_deg": link.min_elevation_deg,
         "parts_mass_kg": bus.parts_mass_kg + effect.mass_delta_kg,
+        "equipment_stack_height_m": stack_height_mm(design) / 1000,
+        "internal_length_m": internal_length_mm(design.form_factor) / 1000,
         "mass_margin_kg": bus.mass_margin_kg,
         "max_consumed_power_w": max(peak_power_w, bus.min_consumed_power_w),
         "min_consumed_power_w": bus.min_consumed_power_w,

@@ -4,6 +4,11 @@ constants:
     value: 6378137.0
     source: https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
     section: Equatorial radius
+  - key: earth_sidereal_day_s
+    label: 地球の恒星日
+    value: 86164.2
+    source: https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
+    section: Sidereal rotation period
   - key: earth_mu_m3s2
     label: 地球の重力定数
     value: 3.9860e14

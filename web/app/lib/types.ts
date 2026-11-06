@@ -132,6 +132,45 @@ export interface DiagramData {
   provisional: boolean;
 }
 
+export interface LayoutItem {
+  id: string;
+  label: string;
+  group: string;
+  role: string;
+  mass_g: number | null;
+  average_power_w: number | null;
+  size_mm: [number, number, number];
+  center_mm: [number, number, number];
+  external: boolean;
+}
+
+export interface SatelliteLayout {
+  items: LayoutItem[];
+  stack_height_mm: number;
+  internal_length_mm: number;
+}
+
+export interface ContactWindow {
+  start_s: number;
+  end_s: number;
+  max_elevation_deg: number;
+  downlink_bit: number;
+}
+
+export interface Timeline {
+  station: string;
+  time_s: number[];
+  generated_power_w: number[];
+  consumed_power_w: number[];
+  battery_ratio: number[];
+  link_margin_db: (number | null)[];
+  downlinked_bit: number[];
+  contacts: ContactWindow[];
+  contact_s: number;
+  downlink_bit: number;
+  min_battery_ratio: number;
+}
+
 export interface SessionResult {
   refusal: string;
   questions: Question[];
@@ -141,6 +180,9 @@ export interface SessionResult {
   satellite: SatelliteView | null;
   equipment: EquipmentCategory[];
   diagrams: DiagramData;
+  layout: SatelliteLayout | null;
+  layout_fits: boolean;
+  timeline: Timeline | null;
   scope_findings: Finding[];
   document: DesignDocument | null;
   launch_request: Record<string, unknown> | null;
