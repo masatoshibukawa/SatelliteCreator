@@ -113,7 +113,7 @@ textarea {
   display: grid;
   gap: 12px;
   min-height: 0;
-  grid-template-columns: minmax(300px, 3fr) minmax(0, 4fr) minmax(340px, 5fr);
+  grid-template-columns: minmax(300px, 22fr) minmax(0, 50fr) minmax(340px, 28fr);
 }
 
 .column {
@@ -141,6 +141,7 @@ textarea {
 
 .panel-title {
   font-size: 14px;
+  white-space: nowrap;
 }
 
 .panel-actions {
@@ -202,6 +203,71 @@ textarea {
   background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 8px;
+}
+
+.option-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip-option {
+  padding: 4px 10px;
+  text-align: left;
+  cursor: pointer;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+}
+
+.chip-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.chip-option[aria-pressed="true"] {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.chip-option[aria-pressed="false"] {
+  background: var(--panel);
+  border-color: var(--border);
+}
+
+.equipment {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 46%;
+  overflow-y: auto;
+}
+
+.equipment-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.equipment-group legend {
+  padding: 0;
+  color: var(--muted);
+}
+
+.column-tabs {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+.column-tabs .btn[aria-selected="true"] {
+  color: #ffffff;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .chat-log {
@@ -275,10 +341,18 @@ textarea {
 
 /* satellite column */
 
+.stage-grid {
+  flex: 1;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  min-height: 0;
+}
+
 .viewer {
   position: relative;
-  flex: 1 1 40%;
-  min-height: 240px;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
   background: var(--panel-2);
@@ -299,10 +373,19 @@ textarea {
   color: var(--muted);
 }
 
+.viewer-title {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  z-index: 1;
+  font-size: 14px;
+}
+
 .viewer-facts {
   position: absolute;
-  top: 10px;
+  top: 32px;
   left: 12px;
+  pointer-events: none;
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
@@ -320,14 +403,54 @@ textarea {
 
 .viewer-note {
   position: absolute;
+  right: 12px;
   bottom: 8px;
   left: 12px;
+  pointer-events: none;
   font-size: 14px;
   color: var(--muted);
 }
 
+.diagram {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.diagram-stage {
+  flex: 1;
+  min-height: 0;
+}
+
+.diagram-stage svg {
+  display: block;
+  font-size: 14px;
+}
+
+.diagram-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+}
+
+.diagram-facts dt {
+  color: var(--muted);
+}
+
+.diagram-facts dd {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.diagram-bad {
+  color: var(--bad);
+}
+
 .simulation {
-  flex: 1 1 32%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -392,7 +515,8 @@ textarea {
 }
 
 .reviews {
-  flex: 1 1 28%;
+  flex: none;
+  max-height: 190px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -551,11 +675,6 @@ textarea {
   margin-right: 8px;
 }
 
-.references h3 {
-  margin-bottom: 4px;
-  font-size: 14px;
-}
-
 @media (max-width: 1199px) {
   .app {
     height: auto;
@@ -571,8 +690,14 @@ textarea {
     min-height: 360px;
   }
 
-  .viewer {
+  .stage-grid {
     flex: none;
-    height: 320px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: 340px;
+  }
+
+  .reviews {
+    max-height: none;
   }
 }

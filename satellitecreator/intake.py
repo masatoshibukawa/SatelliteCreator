@@ -10,11 +10,14 @@ from __future__ import annotations
 import re
 import unicodedata
 from collections.abc import Callable, Mapping
+from functools import cache
 from typing import TypeVar
 
 from pydantic import computed_field
 
 from satellitecreator.design import Orbit, SatelliteDesign, form_factor, load_scope_limits
+from satellitecreator.equipment import check_selection
+from satellitecreator.loading import load_yaml
 from satellitecreator.project import MissionDefinition, Project, SuccessCriterion, SuccessLevel
 from satellitecreator.requirements import (
     Comparator,
@@ -90,6 +93,7 @@ class QuestionState(Frozen):
     from_prompt: bool = False
     assumed: bool = False
     unreadable: bool = False
+    options: tuple[str, ...] = ()
 
     @computed_field
     @property
@@ -305,6 +309,7 @@ def _design(
     inclination_deg: float | None,
     peak_power_w: float | None,
     mission_duration_s: float | None,
+    equipment: tuple[str, ...],
 ) -> SatelliteDesign | None:
     if form_factor_id is None or altitude_m is None or inclination_deg is None:
         return None
@@ -314,6 +319,7 @@ def _design(
         orbit=orbit,
         peak_power_w=peak_power_w,
         mission_duration_s=mission_duration_s,
+        equipment=equipment,
     )
 
 
@@ -341,10 +347,24 @@ def _apply_assumptions(
     return project.model_copy(update={"requirements": requirements}), marked
 
 
+@cache
+def load_question_options() -> dict[str, tuple[str, ...]]:
+    return {key: tuple(value) for key, value in load_yaml("process/question_options.yaml").items()}
+
+
+def _with_options(questions: tuple[QuestionState, ...]) -> tuple[QuestionState, ...]:
+    options = load_question_options()
+    return tuple(item.model_copy(update={"options": options[item.id]}) for item in questions)
+
+
 def build_intake(
-    prompt: str, answers: Mapping[str, str], assumed: Mapping[str, str] | None = None
+    prompt: str,
+    answers: Mapping[str, str],
+    assumed: Mapping[str, str] | None = None,
+    equipment: tuple[str, ...] = (),
 ) -> Intake:
     """`assumed` names answers that are assumptions, with the reason for each."""
+    check_selection(equipment)
     unknown = sorted(set(answers) - set(QUESTION_IDS))
     if unknown:
         raise UnknownQuestionError(f"unknown question ids: {unknown}")
@@ -396,11 +416,12 @@ def build_intake(
             inclination[1],
             parse_peak_power_w(f"{prompt} {answers.get('power', '')}"),
             duration[1],
+            equipment,
         ),
     )
     questions = (form_question, altitude[0], inclination[0], *free_text.values(), duration[0])
     project, questions = _apply_assumptions(project, questions, assumed or {})
-    return Intake(project=project, questions=questions, form_factor=form_factor_id)
+    return Intake(project=project, questions=_with_options(questions), form_factor=form_factor_id)
 
 
 def _kilometres_text(altitude_m: float) -> str:

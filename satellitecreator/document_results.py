@@ -5,6 +5,7 @@ from __future__ import annotations
 from satellitecreator.catalog import ReferenceBus
 from satellitecreator.core.ledger import Ledger
 from satellitecreator.core.registry import Block, Equation, load_equations
+from satellitecreator.equipment import equipment_effect, load_equipment, selected_options
 from satellitecreator.requirements import Function
 from satellitecreator.simulation import format_entry
 
@@ -22,14 +23,21 @@ def _value_line(equation: Equation, ledger: Ledger) -> str:
     return f"{equation.label}: {format_entry(equation, ledger.get(equation.output))}"
 
 
-def equipment_lines(bus: ReferenceBus) -> tuple[str, ...]:
+def equipment_lines(bus: ReferenceBus, chosen: tuple[str, ...]) -> tuple[str, ...]:
     groups = dict.fromkeys(item.group for item in bus.parts)
     lines = []
     for group in groups:
         parts = tuple(item for item in bus.parts if item.group == group)
         names = "、".join(item.id for item in parts)
         lines.append(f"{group}: {sum(item.mass_g for item in parts):.1f} g（{names}）")
-    return (*lines, f"質量余裕: {bus.mass_margin_g:.1f} g")
+    labels = {item.id: item.label for item in load_equipment().categories}
+    selected = tuple(
+        f"{labels[item.category]}の選択: {item.label}（{item.mass_g:g} g、暫定）"
+        for item in selected_options(bus.form_factor, chosen)
+    )
+    mass_delta_kg = equipment_effect(bus, chosen).mass_delta_kg
+    change = (f"選択による質量の変化: {mass_delta_kg * 1000:+.1f} g",) if mass_delta_kg else ()
+    return (*lines, f"質量余裕: {bus.mass_margin_g:.1f} g", *selected, *change)
 
 
 def subsystem_result_lines(ledger: Ledger, labels: dict[Function, str]) -> tuple[str, ...]:

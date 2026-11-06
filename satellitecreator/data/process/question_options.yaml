@@ -1,0 +1,18 @@
+# Answers offered as buttons. The user can still type anything else. form_factor lists only the
+# sizes that have a reference bus, because the others stop at the equipment question.
+form_factor: [1U, 3U]
+altitude: [400 km, 500 km, 550 km, 600 km]
+inclination: [31 度, 51.6 度, 97.5 度]
+stakeholders: [大学の研究室, 研究機関, 自治体, 企業]
+minimum_success:
+  - 軌道上でテレメトリを受信する
+  - ミッション機器の動作を確認する
+  - ミッションデータを地上で受信する
+mission_payload: [地球を撮影する, 光通信を実証する, 大気を観測する, 新しい技術を軌道上で実証する]
+communication: [テレメトリとコマンドを送受信する, ミッションデータをダウンリンクする]
+power: [すべての運用モードの電力を賄う, 日陰でもバッテリで運用を続ける]
+attitude_control: [地球指向, 太陽指向, 制御なし]
+thermal_control: [バッテリを許容温度に保つ, ミッション機器を許容温度に保つ, 特になし]
+data_handling: [搭載メモリに保存してダウンリンクする, 軌道上で処理して結果だけ送る]
+operations_concept: [地上局 1 局で 1 日 1 回通信する, 複数の地上局で 1 日数回通信する]
+mission_duration: [6 か月, 1 年, 2 年]

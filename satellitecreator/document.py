@@ -8,22 +8,21 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from satellitecreator.catalog import load_reference_buses, reference_bus
+from satellitecreator.catalog import reference_bus
+from satellitecreator.core.checks import CheckState, evaluate_checks
 from satellitecreator.core.ledger import Ledger
-from satellitecreator.core.registry import load_constants, load_equations
+from satellitecreator.core.registry import load_equations
 from satellitecreator.design import (
     check_scope,
     envelope,
     form_factor,
     load_launch_vehicle,
-    load_scope_limits,
 )
 from satellitecreator.document_results import (
     equipment_lines,
     ground_link_lines,
     subsystem_result_lines,
 )
-from satellitecreator.process import load_review_specs
 from satellitecreator.project import Project, SuccessLevel
 from satellitecreator.requirements import Function, RequirementLevel, RequirementStatus
 from satellitecreator.schema import Frozen
@@ -50,42 +49,6 @@ _SUCCESS_LABELS = {
     SuccessLevel.FULL: "フルサクセス",
     SuccessLevel.EXTRA: "エクストラサクセス",
 }
-_CUBESAT_SPECIFICATION_URL = (
-    "https://www.nasa.gov/wp-content/uploads/2018/01/"
-    "cubesatdesignspecificationrev14_12022-02-09.pdf"
-)
-_ORBITAL_MECHANICS_URL = (
-    "https://ntrs.nasa.gov/api/citations/20205003902/downloads/"
-    "Introduction%20to%20Orbital%20Mechanics%20and%20Spacecraft%20Attitudes"
-    "%20for%20Thermal%20Engineers%20CHARTS%20PDF.pdf"
-)
-_SOURCE_TITLES = {
-    "https://www.satcon.jp/contest/doc/1_boshu26.pdf": "第34回衛星設計コンテスト 募集要項",
-    _CUBESAT_SPECIFICATION_URL: "CubeSat Design Specification Rev. 14.1",
-    _ORBITAL_MECHANICS_URL: (
-        "NASA, Introduction to Orbital Mechanics and Spacecraft Attitudes for Thermal Engineers"
-    ),
-    "https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html": "NASA Earth Fact Sheet",
-    "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-310A.pdf": "JERG-2-310A 熱制御系設計標準",
-    "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-214A.pdf": "JERG-2-214A 電源系設計標準",
-    "https://arxiv.org/pdf/1908.09501": (
-        "CubeSat Communications: Recent Advances and Future Challenges"
-    ),
-    "https://physics.nist.gov/cgi-bin/cuu/Value?c": "NIST, speed of light",
-    "https://physics.nist.gov/cgi-bin/cuu/Value?sigma": "NIST, Stefan-Boltzmann constant",
-    "https://tfaws.nasa.gov/wp-content/uploads/On-Orbit_Thermal_Environments_TFAWS_2014.pdf": (
-        "NASA TFAWS, Introduction to On-Orbit Thermal Environments"
-    ),
-    "https://www.satcon.jp/history/prize22/pdf/22_asj.pdf": "OPT-CUBE 解析書（第22回）",
-    "https://www.space.pitt.edu/sites/default/files/2024-10/Arnold_AERO12.pdf": (
-        "Arnold et al., Energy Budgeting for CubeSats（M-Cubed の電力収支）"
-    ),
-    "https://www.preprints.org/manuscript/202404.0391": (
-        "Okuyama, 超小型衛星の固有振動数に関する論文（H-IIA の要求を引用）"
-    ),
-    "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JMR-003E.pdf": "JMR-003E スペースデブリ発生防止標準",
-    "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-100.pdf": "JERG-2-100 システム設計標準",
-}
 
 
 class SectionState(StrEnum):
@@ -108,16 +71,10 @@ class ChecklistItem(Frozen):
     state: SectionState
 
 
-class Reference(Frozen):
-    title: str
-    url: str
-
-
 class Document(Frozen):
     title: str
     sections: tuple[Section, ...]
     checklist: tuple[ChecklistItem, ...]
-    references: tuple[Reference, ...]
     markdown: str
 
 
@@ -146,7 +103,7 @@ def _mission_section(project: Project) -> Section:
 def _analysis_section(ledger: Ledger) -> Section:
     title = "ミッション解析結果"
     lines = tuple(
-        f"{item.label}: {format_entry(item, ledger.get(item.output))}（{item.formula}）"
+        f"{item.label}: {format_entry(item, ledger.get(item.output))}"
         for item in load_equations()
         if item.summary and ledger.get(item.output) is not None
     )
@@ -213,7 +170,7 @@ def _system_section(project: Project) -> Section:
             else ()
         ),
     )
-    equipment = equipment_lines(bus) if bus else ()
+    equipment = equipment_lines(bus, design.equipment) if bus else ()
     lines = (*lines, *choices, *equipment)
     out_of_scope = "、".join(item.message for item in check_scope(design))
     missing = "機器の寸法と配置は未検討です" if bus else "搭載機器と質量配分は未計算です"
@@ -291,25 +248,22 @@ def _operations_section(project: Project) -> Section:
     )
 
 
-def _references() -> tuple[Reference, ...]:
-    limits = load_scope_limits()
-    sources = (
-        *(item.source for item in limits.form_factors),
-        *(item.source for item in limits.envelopes),
-        limits.leo_max_altitude.source,
-        load_launch_vehicle().source,
-        *(item.source for item in load_review_specs()),
-        *(item.source for item in load_reference_buses()),
-        *(item.source for item in load_constants()),
-        *(item.source for item in load_equations()),
+def _summary_section(project: Project, ledger: Ledger) -> Section:
+    title = "まとめ"
+    design = project.design
+    if design is None:
+        return _pending("8", title, "大きさと軌道が決まると記載されます")
+    checks = tuple(item for item in evaluate_checks(ledger) if item.state is not CheckState.NOT_RUN)
+    passed = sum(item.state is CheckState.PASSED for item in checks)
+    lines = (
+        f"{design.form_factor} の衛星を、高度 {design.orbit.altitude_m / 1000:g} km、"
+        f"軌道傾斜角 {design.orbit.inclination_deg:g} 度で設計しました",
+        f"整合チェックは実行した {len(checks)} 件のうち {passed} 件が合格です",
     )
-    unique = dict.fromkeys(source for source in sources if source)
-    return tuple(Reference(title=_SOURCE_TITLES.get(url, url), url=url) for url in unique)
+    return Section(number="8", title=title, state=SectionState.PARTIAL, lines=lines)
 
 
-def _sections(
-    project: Project, ledger: Ledger, references: tuple[Reference, ...]
-) -> tuple[Section, ...]:
+def _sections(project: Project, ledger: Ledger) -> tuple[Section, ...]:
     return (
         _mission_section(project),
         _analysis_section(ledger),
@@ -326,13 +280,7 @@ def _sections(
             "部品カタログを実装すると記載されます",
         ),
         _pending("7", "開発・製造・打上スケジュール", "対話の項目に追加すると記載されます"),
-        Section(
-            number="8",
-            title="まとめ、参考文献等",
-            state=SectionState.PARTIAL,
-            lines=tuple(item.title for item in references),
-            pending_note="まとめは設計が完了すると記載されます",
-        ),
+        _summary_section(project, ledger),
     )
 
 
@@ -377,32 +325,25 @@ def _section_markdown(section: Section) -> str:
 
 
 def _to_markdown(
-    title: str,
-    sections: tuple[Section, ...],
-    checklist: tuple[ChecklistItem, ...],
-    references: tuple[Reference, ...],
+    title: str, sections: tuple[Section, ...], checklist: tuple[ChecklistItem, ...]
 ) -> str:
     rows = [f"| {item.number} | {item.label} | {item.state} |" for item in checklist]
-    links = [f"- [{item.title}]({item.url})" for item in references]
     return "\n\n".join(
         [
             f"# 設計書: {title}",
             *(_section_markdown(section) for section in sections),
             "\n".join(["## 記載項目の状況", "", "| 番号 | 項目 | 状態 |", "|---|---|---|", *rows]),
-            "\n".join(["## 出典", "", *links]),
         ]
     )
 
 
 def build_document(project: Project) -> Document:
-    references = _references()
     ledger = project_ledger(project)
-    sections = _sections(project, ledger, references)
+    sections = _sections(project, ledger)
     checklist = _checklist(project, ledger)
     return Document(
         title=project.name,
         sections=sections,
         checklist=checklist,
-        references=references,
-        markdown=_to_markdown(project.name, sections, checklist, references),
+        markdown=_to_markdown(project.name, sections, checklist),
     )

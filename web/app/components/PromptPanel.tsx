@@ -78,6 +78,19 @@ function AnswerForm({
     <form className="msg msg-question" onSubmit={submit}>
       <span className="msg-role">質問</span>
       <label htmlFor="answer-text">{question.text}</label>
+      <div className="option-list">
+        {question.options.map((option) => (
+          <button
+            key={option}
+            type="button"
+            className="chip-option"
+            disabled={busy}
+            onClick={() => onAnswer(question.id, option)}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
       {question.unreadable && (
         <p className="msg-warning">「{question.answer}」は読み取れないか、対応していません。もう一度お願いします。</p>
       )}
@@ -87,6 +100,7 @@ function AnswerForm({
         onChange={(event) => setText(event.target.value)}
         rows={2}
         maxLength={2000}
+        placeholder="選択肢にないときは入力してください"
       />
       <button type="submit" className="btn btn-primary btn-small" disabled={busy || text.trim() === ""}>
         回答する

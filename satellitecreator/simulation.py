@@ -13,6 +13,7 @@ from satellitecreator.design import (
     form_factor,
     load_launch_vehicle,
 )
+from satellitecreator.equipment import equipment_effect
 from satellitecreator.project import Project
 from satellitecreator.schema import Frozen
 
@@ -76,11 +77,13 @@ def _blend(base: float, covering: float, covered_ratio: float) -> float:
 
 
 def _bus_inputs(bus: ReferenceBus, design: SatelliteDesign) -> dict[str, float]:
+    effect = equipment_effect(bus, design.equipment)
     covered_ratio = 0.0 if design.surface is None else design.radiator_ratio
     finish = None if design.surface is None else surface_finish(design.surface)
     absorptivity = finish.absorptivity if finish else bus.surface_absorptivity
     emissivity = finish.emissivity if finish else bus.surface_emissivity
-    link = bus.link
+    link = effect.link
+    peak_power_w = (design.peak_power_w or bus.max_consumed_power_w) + effect.power_delta_w
     return {
         "design_acceleration_mps2": bus.design_load_g * _STANDARD_GRAVITY_MPS2,
         "allowable_stress_pa": bus.allowable_stress_mpa * 1e6,
@@ -97,16 +100,18 @@ def _bus_inputs(bus: ReferenceBus, design: SatelliteDesign) -> dict[str, float]:
         "other_loss_db": link.other_loss_db,
         "required_ebno_db": link.required_ebno_db,
         "min_elevation_deg": link.min_elevation_deg,
-        "parts_mass_kg": bus.parts_mass_kg,
+        "parts_mass_kg": bus.parts_mass_kg + effect.mass_delta_kg,
         "mass_margin_kg": bus.mass_margin_kg,
-        "max_consumed_power_w": design.peak_power_w or bus.max_consumed_power_w,
+        "max_consumed_power_w": max(peak_power_w, bus.min_consumed_power_w),
         "min_consumed_power_w": bus.min_consumed_power_w,
         "heater_power_w": design.heater_power_w,
-        "sunlit_generated_power_w": bus.sunlit_generated_power_w(design.attitude, covered_ratio),
+        "sunlit_generated_power_w": bus.sunlit_generated_power_w(design.attitude, covered_ratio)
+        * effect.generation_ratio,
         "charge_efficiency_ratio": bus.charge_efficiency,
         "average_consumed_power_w": bus.average_consumed_power_w(
             design.attitude, design.peak_power_w
-        ),
+        )
+        + effect.power_delta_w,
         "battery_capacity_j": bus.battery_capacity_j,
         "allowable_depth_of_discharge_ratio": _ALLOWABLE_DEPTH_OF_DISCHARGE_RATIO,
         "surface_absorptivity_ratio": _blend(bus.surface_absorptivity, absorptivity, covered_ratio),

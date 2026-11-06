@@ -103,18 +103,6 @@ export default function DocumentPanel({ document: designDocument, launchRequest 
             ))}
           </ol>
         </details>
-        <div className="references">
-          <h3>出典</h3>
-          <ul>
-            {designDocument.references.map((item) => (
-              <li key={item.url}>
-                <a href={item.url} target="_blank" rel="noreferrer">
-                  {item.title}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </section>
   );

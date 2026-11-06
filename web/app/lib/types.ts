@@ -18,6 +18,7 @@ export interface Question {
   assumed: boolean;
   unreadable: boolean;
   answered: boolean;
+  options: string[];
 }
 
 export interface ReviewView {
@@ -51,16 +52,10 @@ export interface ChecklistItem {
   state: SectionState;
 }
 
-export interface Reference {
-  title: string;
-  url: string;
-}
-
 export interface DesignDocument {
   title: string;
   sections: Section[];
   checklist: ChecklistItem[];
-  references: Reference[];
   markdown: string;
 }
 
@@ -102,6 +97,41 @@ export interface DesignLoop {
   questions: string[];
 }
 
+export interface EquipmentChoice {
+  id: string;
+  label: string;
+  mass_g: number;
+  average_power_mw: number;
+  provisional: boolean;
+}
+
+export interface EquipmentCategory {
+  id: string;
+  label: string;
+  selected: string;
+  options: EquipmentChoice[];
+}
+
+/** A value stays null until the design core has calculated it. */
+export interface DiagramData {
+  altitude_m: number | null;
+  inclination_deg: number | null;
+  orbit_period_s: number | null;
+  max_eclipse_s: number | null;
+  min_sunlight_s: number | null;
+  usable_sunlit_power_w: number | null;
+  average_consumed_power_w: number | null;
+  orbit_generated_energy_j: number | null;
+  orbit_consumed_energy_j: number | null;
+  battery_depth_of_discharge_ratio: number | null;
+  link_margin_db: number | null;
+  slant_range_m: number | null;
+  min_elevation_deg: number | null;
+  downlink_frequency_hz: number | null;
+  downlink_rate_bps: number | null;
+  provisional: boolean;
+}
+
 export interface SessionResult {
   refusal: string;
   questions: Question[];
@@ -109,6 +139,8 @@ export interface SessionResult {
   simulations: BlockStatus[];
   checks: CheckResult[];
   satellite: SatelliteView | null;
+  equipment: EquipmentCategory[];
+  diagrams: DiagramData;
   scope_findings: Finding[];
   document: DesignDocument | null;
   launch_request: Record<string, unknown> | null;

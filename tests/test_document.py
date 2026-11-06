@@ -71,13 +71,13 @@ def test_uncomputed_chapters_are_pending_with_a_reason_and_no_values():
         assert section.pending_note
 
 
-def test_mission_analysis_shows_the_calculated_orbit_with_its_equation():
+def test_mission_analysis_shows_the_calculated_orbit():
     document = build_document(build_intake(PROMPT, {}).project)
 
     section = _section(document, "2")
 
     assert section.state is SectionState.PARTIAL
-    assert any("軌道周期: 92.6 分" in line and "T = 2π" in line for line in section.lines)
+    assert "軌道周期: 92.6 分" in section.lines
     assert any(line.startswith("最大の日陰時間: 36.1 分") for line in section.lines)
     assert "円軌道" in section.pending_note
 
@@ -99,12 +99,6 @@ def test_mission_analysis_is_pending_without_an_orbit():
 
     assert section.state is SectionState.PENDING
     assert section.lines == ()
-
-
-def test_references_include_the_sources_of_the_equations():
-    document = build_document(build_intake(PROMPT, {}).project)
-
-    assert any("ntrs.nasa.gov" in item.url for item in document.references)
 
 
 def test_subsystem_section_stays_partial_until_calculations_exist():
@@ -200,22 +194,12 @@ def test_mission_analysis_shows_mass_and_temperature_marked_provisional():
     assert any(line.startswith("周回の最高温度") and "（暫定）" in line for line in lines)
 
 
-def test_references_list_the_sources_of_the_values_used():
-    document = build_document(build_intake(PROMPT, {}).project)
-
-    urls = {item.url for item in document.references}
-
-    assert "https://www.satcon.jp/contest/doc/1_boshu26.pdf" in urls
-    assert any("nasa.gov" in url for url in urls)
-
-
 def test_markdown_has_every_chapter_and_marks_pending_ones():
     document = build_document(build_intake(PROMPT, {}).project)
 
     assert "## 5.1" in document.markdown
     assert "## 7" in document.markdown
     assert "未計算" in document.markdown
-    assert "https://www.satcon.jp/contest/doc/1_boshu26.pdf" in document.markdown
 
 
 def test_system_section_lists_the_equipment_mass_by_group():
@@ -278,3 +262,37 @@ def test_ground_section_stays_pending_without_a_link_calculation():
 
     assert section.state is SectionState.PENDING
     assert section.lines == ()
+
+
+def test_document_shows_no_formulas_and_no_references():
+    document = build_document(build_intake(PROMPT, {}).project)
+
+    assert "T = 2π" not in document.markdown
+    assert "## 出典" not in document.markdown
+    assert "http" not in document.markdown
+
+
+def test_summary_counts_the_checks_that_ran():
+    document = build_document(build_intake(PROMPT, {}).project)
+
+    section = _section(document, "8")
+
+    assert section.title == "まとめ"
+    assert "3U の衛星を、高度 400 km" in section.lines[0]
+    assert "整合チェックは実行した" in section.lines[1]
+
+
+def test_summary_is_pending_without_a_design():
+    document = build_document(build_intake("小型衛星で大気を測りたい", {}).project)
+
+    assert _section(document, "8").state is SectionState.PENDING
+
+
+def test_system_section_reports_the_chosen_equipment_and_its_mass_change():
+    prompt = "高度 500 km、軌道傾斜角 97.5 度の 1U CubeSat で地球を撮影したい"
+    document = build_document(build_intake(prompt, {}, equipment=("camera_large",)).project)
+
+    text = "\n".join(_section(document, "5.1").lines)
+
+    assert "ミッション機器の選択: 望遠カメラ（400 g、暫定）" in text
+    assert "選択による質量の変化: +380.0 g" in text

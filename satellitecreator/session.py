@@ -9,9 +9,12 @@ from collections.abc import Mapping
 from enum import StrEnum
 
 from satellitecreator.agents import design_agents
+from satellitecreator.catalog import reference_bus
 from satellitecreator.core.checks import CheckResult, CheckState, evaluate_checks
 from satellitecreator.design import check_scope, envelope, form_factor
+from satellitecreator.diagrams import DiagramData, diagram_data
 from satellitecreator.document import Document, build_document
+from satellitecreator.equipment import load_equipment, selected_options
 from satellitecreator.flowdown import with_subsystem_requirements
 from satellitecreator.gates import evaluate_gate, pass_review
 from satellitecreator.intake import QuestionState, build_intake
@@ -63,6 +66,21 @@ class SatelliteView(Frozen):
     max_mass_kg: float
 
 
+class EquipmentChoice(Frozen):
+    id: str
+    label: str
+    mass_g: float
+    average_power_mw: float
+    provisional: bool
+
+
+class EquipmentCategoryView(Frozen):
+    id: str
+    label: str
+    selected: str
+    options: tuple[EquipmentChoice, ...]
+
+
 class SessionResult(Frozen):
     refusal: str = ""
     questions: tuple[QuestionState, ...] = ()
@@ -71,6 +89,8 @@ class SessionResult(Frozen):
     simulations: tuple[BlockStatus, ...] = ()
     checks: tuple[CheckResult, ...] = ()
     satellite: SatelliteView | None = None
+    equipment: tuple[EquipmentCategoryView, ...] = ()
+    diagrams: DiagramData = DiagramData()
     scope_findings: tuple[Finding, ...] = ()
     document: Document | None = None
     launch_request: LaunchRequest | None = None
@@ -120,6 +140,34 @@ def _satellite_view(form_factor_id: str | None) -> SatelliteView | None:
     )
 
 
+def _equipment_views(
+    form_factor_id: str | None, chosen: tuple[str, ...]
+) -> tuple[EquipmentCategoryView, ...]:
+    if form_factor_id is None or reference_bus(form_factor_id) is None:
+        return ()
+    catalog = load_equipment()
+    selected = {item.category: item.id for item in selected_options(form_factor_id, chosen)}
+    return tuple(
+        EquipmentCategoryView(
+            id=category.id,
+            label=category.label,
+            selected=selected[category.id],
+            options=tuple(
+                EquipmentChoice(
+                    id=item.id,
+                    label=item.label,
+                    mass_g=item.mass_g,
+                    average_power_mw=item.average_power_mw,
+                    provisional=item.provisional,
+                )
+                for item in catalog.options
+                if item.category == category.id
+            ),
+        )
+        for category in catalog.categories
+    )
+
+
 def _with_claude_assumptions(
     prompt: str, answers: Mapping[str, str]
 ) -> tuple[Mapping[str, str], dict[str, str]]:
@@ -137,12 +185,14 @@ def _with_claude_assumptions(
     return {**answers, **picked}, {key: reasons[key] for key in picked}
 
 
-def run_session(prompt: str, answers: Mapping[str, str]) -> SessionResult:
+def run_session(
+    prompt: str, answers: Mapping[str, str], equipment: tuple[str, ...] = ()
+) -> SessionResult:
     refusal = check_request(" ".join((prompt, *answers.values())))
     if refusal:
         return SessionResult(refusal=refusal)
     filled_answers, assumed = _with_claude_assumptions(prompt, answers)
-    intake = build_intake(prompt, filled_answers, assumed)
+    intake = build_intake(prompt, filled_answers, assumed, equipment)
     loop = run_design_loop(intake.project, agents=design_agents())
     project = with_subsystem_requirements(loop.project)
     ledger = project_ledger(project)
@@ -155,6 +205,8 @@ def run_session(prompt: str, answers: Mapping[str, str]) -> SessionResult:
         ),
         checks=evaluate_checks(ledger),
         satellite=_satellite_view(intake.form_factor),
+        equipment=_equipment_views(intake.form_factor, equipment),
+        diagrams=diagram_data(ledger),
         scope_findings=check_scope(project.design) if project.design else (),
         document=build_document(project),
         launch_request=build_launch_request(project),

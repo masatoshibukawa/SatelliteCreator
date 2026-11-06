@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { buildEquipment } from "./equipmentModels";
 import type { SatelliteView } from "./types";
 
 /** Minimum rail width, CubeSat Design Specification Rev. 14.1, 2.2.5. */
@@ -26,10 +27,10 @@ function unitRing(width: number, depth: number, z: number): THREE.LineLoop {
 }
 
 /**
- * Outer shape only: the launch envelope from the API and its four rails. Solar panels, antennas
- * and payloads are left out until they are designed. The CubeSat Z axis points up in the scene.
+ * The launch envelope from the API, its four rails and the chosen equipment. The CubeSat Z axis
+ * points up in the scene.
  */
-export function buildSatelliteModel(satellite: SatelliteView): THREE.Group {
+export function buildSatelliteModel(satellite: SatelliteView, equipment: readonly string[]): THREE.Group {
   const group = new THREE.Group();
   const { width_m: width, depth_m: depth, length_m: length } = satellite;
 
@@ -53,12 +54,13 @@ export function buildSatelliteModel(satellite: SatelliteView): THREE.Group {
   for (let index = 1; index < units; index += 1) {
     group.add(unitRing(width, depth, -length / 2 + (length * index) / units));
   }
+  group.add(...buildEquipment({ width, depth, length }, equipment));
   return group;
 }
 
 export function disposeGroup(group: THREE.Group): void {
   group.traverse((node) => {
-    if (node instanceof THREE.Mesh || node instanceof THREE.LineLoop) {
+    if (node instanceof THREE.Mesh || node instanceof THREE.Line) {
       node.geometry.dispose();
       const materials: THREE.Material[] = Array.isArray(node.material) ? node.material : [node.material];
       materials.forEach((material) => material.dispose());

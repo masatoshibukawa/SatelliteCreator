@@ -1,0 +1,23 @@
+# Equipment the user can choose from. The owner accepted rough values for parts, so every option
+# is provisional. Only the difference from a bus's default option changes the calculation, which
+# keeps the reference buses as published. cell_ratio is relative to body-mounted cells.
+categories:
+  - {id: payload, label: ミッション機器}
+  - {id: solar, label: 太陽電池}
+  - {id: communication, label: 通信機}
+  - {id: attitude, label: 姿勢制御}
+options:
+  - {id: camera_small, category: payload, label: 小型カメラ, mass_g: 20, average_power_mw: 100, provisional: true}
+  - {id: camera_large, category: payload, label: 望遠カメラ, mass_g: 400, average_power_mw: 500, provisional: true}
+  - {id: atmosphere_sensor, category: payload, label: 大気センサ, mass_g: 150, average_power_mw: 200, provisional: true}
+  - {id: optical_terminal, category: payload, label: 光通信機, mass_g: 962, average_power_mw: 300, provisional: true}
+  - {id: body_cells, category: solar, label: 胴体貼り付け, mass_g: 120, average_power_mw: 0, cell_ratio: 1, provisional: true}
+  # 16.4 cell groups with paddles against 6.6 on the body alone, OPT-CUBE report 表 30.
+  - {id: deployed_panels, category: solar, label: 展開パネル, mass_g: 240, average_power_mw: 0, cell_ratio: 2.48, provisional: true}
+  - {id: uhf_radio, category: communication, label: UHF 無線機, mass_g: 110, average_power_mw: 300, link_bus: 1U, provisional: true}
+  - {id: s_band_radio, category: communication, label: S 帯無線機, mass_g: 502, average_power_mw: 800, link_bus: 3U, provisional: true}
+  - {id: magnetorquer, category: attitude, label: 磁気トルカ, mass_g: 20, average_power_mw: 150, provisional: true}
+  - {id: reaction_wheels, category: attitude, label: リアクションホイール, mass_g: 300, average_power_mw: 800, provisional: true}
+defaults:
+  1U: [camera_small, body_cells, uhf_radio, magnetorquer]
+  3U: [optical_terminal, deployed_panels, s_band_radio, reaction_wheels]

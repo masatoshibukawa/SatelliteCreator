@@ -58,6 +58,7 @@ class SatelliteDesign(Frozen):
     peak_power_w: float | None = Field(default=None, gt=0)
     mission_duration_s: float | None = Field(default=None, gt=0)
     attitude: Literal["free_rotation", "sun_pointing"] = "free_rotation"
+    equipment: tuple[str, ...] = ()
 
 
 @cache
