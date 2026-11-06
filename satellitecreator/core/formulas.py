@@ -376,6 +376,40 @@ def natural_frequency_hz(
     return math.sqrt(stiffness / total_mass_kg) / (2 * math.pi)
 
 
+def margin_of_safety_ratio(
+    total_mass_kg: float,
+    design_acceleration_mps2: float,
+    envelope_length_m: float,
+    envelope_depth_m: float,
+    rail_bending_inertia_m4: float,
+    allowable_stress_pa: float,
+    safety_factor_ratio: float,
+) -> float:
+    moment_nm = total_mass_kg * design_acceleration_mps2 * envelope_length_m / 2
+    stress_pa = moment_nm * (envelope_depth_m / 2) / rail_bending_inertia_m4
+    return allowable_stress_pa / (safety_factor_ratio * stress_pa) - 1
+
+
+def orbit_lifetime_s(
+    altitude_m: float,
+    orbit_radius_m: float,
+    earth_mu_m3s2: float,
+    surface_area_m2: float,
+    total_mass_kg: float,
+    drag_coefficient_ratio: float,
+    reference_density_kgpm3: float,
+    reference_altitude_m: float,
+    density_scale_height_m: float,
+) -> float:
+    """Time for the altitude to fall by one scale height in an exponential atmosphere."""
+    density = reference_density_kgpm3 * math.exp(
+        -(altitude_m - reference_altitude_m) / density_scale_height_m
+    )
+    ballistic_ratio = drag_coefficient_ratio * (surface_area_m2 / 4) / total_mass_kg
+    decay_mps = density * ballistic_ratio * math.sqrt(earth_mu_m3s2 * orbit_radius_m)
+    return density_scale_height_m / decay_mps
+
+
 FORMULAS: dict[str, Callable[..., float]] = {
     function.__name__: function
     for function in (
@@ -410,5 +444,7 @@ FORMULAS: dict[str, Callable[..., float]] = {
         link_margin_db,
         rail_bending_inertia_m4,
         natural_frequency_hz,
+        margin_of_safety_ratio,
+        orbit_lifetime_s,
     )
 }

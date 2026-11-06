@@ -27,6 +27,10 @@ reference_buses:
       other_loss_db: 1.5
       required_ebno_db: 4.5
       min_elevation_deg: 5
+    # p. 13: X-axis load of 表 21 and the allowable stress and safety factor in the text.
+    design_load_g: 8.66
+    allowable_stress_mpa: 226
+    safety_factor: 1.5
     battery_voltage_v: 9.6
     battery_capacity_mah: 2450
     charge_efficiency: 0.692

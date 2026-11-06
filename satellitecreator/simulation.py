@@ -38,6 +38,7 @@ _BLOCK_NOTES = {
 # Stand-in limit: no source for this battery yet, and the inputs are marked provisional.
 _ALLOWABLE_DEPTH_OF_DISCHARGE_RATIO = 0.30
 _SUN_POINTING_THERMAL_NOTE = "太陽指向は熱の計算に未反映で、自由回転のままです"
+_STANDARD_GRAVITY_MPS2 = 9.80665
 _NEEDS_BUS_NOTE = "機器構成が必要です。今は 3U だけ登録しています"
 _WAITING_NOTES = {
     Block.MASS: _NEEDS_BUS_NOTE,
@@ -78,6 +79,9 @@ def _bus_inputs(bus: ReferenceBus, design: SatelliteDesign) -> dict[str, float]:
     emissivity = finish.emissivity if finish else bus.surface_emissivity
     link = bus.link
     return {
+        "design_acceleration_mps2": bus.design_load_g * _STANDARD_GRAVITY_MPS2,
+        "allowable_stress_pa": bus.allowable_stress_mpa * 1e6,
+        "safety_factor_ratio": bus.safety_factor,
         "downlink_frequency_hz": link.frequency_hz,
         "downlink_rate_bps": link.rate_bps,
         "transmit_power_db": link.transmit_power_db,
@@ -123,6 +127,8 @@ def project_ledger(project: Project) -> Ledger:
         "envelope_length_m": size.length_m,
         "required_natural_frequency_hz": load_launch_vehicle().longitudinal_frequency_hz,
     }
+    if design.mission_duration_s is not None:
+        inputs = {**inputs, "mission_duration_s": design.mission_duration_s}
     bus = reference_bus(design.form_factor)
     if bus is None:
         return solve(inputs)

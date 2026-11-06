@@ -56,6 +56,7 @@ class SatelliteDesign(Frozen):
     radiator_ratio: float = Field(default=1.0, gt=0, le=1)
     heater_power_w: float = Field(default=0.0, ge=0)
     peak_power_w: float | None = Field(default=None, gt=0)
+    mission_duration_s: float | None = Field(default=None, gt=0)
     attitude: Literal["free_rotation", "sun_pointing"] = "free_rotation"
 
 

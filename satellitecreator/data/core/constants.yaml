@@ -62,3 +62,22 @@ constants:
     value: 7.0e10
     provisional: true
     notes: Typical value for aluminium alloys. Source still to be confirmed.
+  - key: drag_coefficient_ratio
+    label: 抗力係数
+    value: 2.2
+    source: https://www.satcon.jp/archive/prize33/pdf/d3307.pdf
+    section: SATEBAL 解析書の軌道解析
+  - key: reference_density_kgpm3
+    label: 基準高度の大気密度
+    value: 3.0e-12
+    provisional: true
+    notes: Typical order at 400 km. It varies strongly with solar activity. Source to be confirmed.
+  - key: reference_altitude_m
+    label: 大気密度の基準高度
+    value: 400000
+    provisional: true
+  - key: density_scale_height_m
+    label: 大気のスケールハイト
+    value: 58000
+    provisional: true
+    notes: Typical order near 400 km. Source to be confirmed.

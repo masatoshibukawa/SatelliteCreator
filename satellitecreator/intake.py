@@ -39,6 +39,11 @@ _INCLINATION_LABELLED = re.compile(
     r"傾斜角?\D{0,8}?" + _NUMBER + r"\s*(?:度|deg|°)?", re.IGNORECASE
 )
 _PEAK_POWER = re.compile(r"消費電力\D{0,8}?" + _NUMBER + r"\s*W", re.IGNORECASE)
+_DURATION = _NUMBER + r"\s*(年|か月|ヶ月|ケ月|カ月)"
+_DURATION_LABELLED = re.compile(r"(?:ミッション|運用)期間\D{0,8}?" + _DURATION)
+_DURATION_ANY = re.compile(_DURATION)
+_SECONDS_PER_YEAR = 365.25 * 86400
+_SECONDS_PER_MONTH = _SECONDS_PER_YEAR / 12
 _BARE_VALUE = re.compile(r"^\s*" + _NUMBER + r"\s*(?:km|キロ|度|deg|°)?\s*$", re.IGNORECASE)
 _HEDGE_BEFORE = re.compile(r"約|およそ")
 _HEDGE_AFTER = re.compile(r"\s*(?:以上|以下|未満|以内|超|程度|くらい|ぐらい|前後|付近|あたり)")
@@ -59,6 +64,7 @@ _QUESTIONS = {
     "thermal_control": "温度管理が特に必要な機器はありますか？",
     "data_handling": "搭載データをどのように処理、保存しますか？",
     "operations_concept": "どのように運用しますか？（地上局、通信の頻度など）",
+    "mission_duration": "ミッション期間はどのくらいですか？（例：6 か月、2 年）",
 }
 QUESTION_IDS = tuple(_QUESTIONS)
 
@@ -143,6 +149,17 @@ def parse_inclination_deg(text: str, *, bare: bool = False) -> float | None:
 def parse_peak_power_w(text: str) -> float | None:
     match = _PEAK_POWER.search(_normalized(text))
     return None if match is None else _exact_number(match)
+
+
+def parse_mission_duration_s(text: str, *, bare: bool = False) -> float | None:
+    normalized = _normalized(text)
+    match = (_DURATION_ANY if bare else _DURATION_LABELLED).search(normalized)
+    if match is None:
+        return None
+    amount = _exact_number(match)
+    if amount is None:
+        return None
+    return amount * (_SECONDS_PER_YEAR if match.group(2) == "年" else _SECONDS_PER_MONTH)
 
 
 def _resolve(
@@ -285,11 +302,17 @@ def _design(
     altitude_m: float | None,
     inclination_deg: float | None,
     peak_power_w: float | None,
+    mission_duration_s: float | None,
 ) -> SatelliteDesign | None:
     if form_factor_id is None or altitude_m is None or inclination_deg is None:
         return None
     orbit = Orbit(altitude_m=altitude_m, inclination_deg=inclination_deg)
-    return SatelliteDesign(form_factor=form_factor_id, orbit=orbit, peak_power_w=peak_power_w)
+    return SatelliteDesign(
+        form_factor=form_factor_id,
+        orbit=orbit,
+        peak_power_w=peak_power_w,
+        mission_duration_s=mission_duration_s,
+    )
 
 
 def build_intake(prompt: str, answers: Mapping[str, str]) -> Intake:
@@ -308,7 +331,18 @@ def build_intake(prompt: str, answers: Mapping[str, str]) -> Intake:
         lambda t, b: parse_inclination_deg(t, bare=b),
         lambda value: f"{value:g} 度",
     )
-    free_text = {question_id: _free_text(question_id, answers) for question_id in QUESTION_IDS[3:]}
+    duration = _resolve(
+        "mission_duration",
+        prompt,
+        answers,
+        lambda t, b: parse_mission_duration_s(t, bare=b),
+        lambda value: f"{value / _SECONDS_PER_MONTH:.1f} か月",
+    )
+    free_text = {
+        question_id: _free_text(question_id, answers)
+        for question_id in QUESTION_IDS[3:]
+        if question_id != "mission_duration"
+    }
 
     mission_requirement = Requirement(
         id="MR-001",
@@ -332,9 +366,10 @@ def build_intake(prompt: str, answers: Mapping[str, str]) -> Intake:
             altitude[1],
             inclination[1],
             parse_peak_power_w(f"{prompt} {answers.get('power', '')}"),
+            duration[1],
         ),
     )
-    questions = (form_question, altitude[0], inclination[0], *free_text.values())
+    questions = (form_question, altitude[0], inclination[0], *free_text.values(), duration[0])
     return Intake(project=project, questions=questions, form_factor=form_factor_id)
 
 

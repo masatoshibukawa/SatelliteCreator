@@ -34,6 +34,14 @@ inputs:
     label: バッテリのエネルギー
   - key: allowable_depth_of_discharge_ratio
     label: 許容放電深度
+  - key: design_acceleration_mps2
+    label: 設計加速度
+  - key: allowable_stress_pa
+    label: 許容応力
+  - key: safety_factor_ratio
+    label: 安全係数
+  - key: mission_duration_s
+    label: ミッション期間
   - key: downlink_frequency_hz
     label: ダウンリンク周波数
   - key: downlink_rate_bps
@@ -68,10 +76,7 @@ inputs:
     label: 許容温度の下限
 
 # Named by checks already. Each one moves to `equations` when its block is built.
-planned_quantities:
-  - margin_of_safety_ratio
-  - orbit_lifetime_s
-  - mission_duration_s
+planned_quantities: []
 
 # Circular orbit only. The maximum eclipse has the Sun in the orbit plane (beta = 0).
 equations:
@@ -332,5 +337,26 @@ equations:
     block: structure
     display_unit: Hz
     display_digits: 0
+    summary: true
+    provisional: true
+  - output: margin_of_safety_ratio
+    label: 安全余裕の概算
+    formula: MS = σ_a/(FS σ) - 1、σ = (m a L/2)(w/2)/I
+    inputs: [total_mass_kg, design_acceleration_mps2, envelope_length_m, envelope_depth_m, rail_bending_inertia_m4, allowable_stress_pa, safety_factor_ratio]
+    block: structure
+    summary: true
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-320C.pdf
+    section: ４．３．２．２
+    provisional: true
+
+  # Orbit lifetime: an order-of-magnitude estimate from one exponential atmosphere. It sits in
+  # the mass block because it needs the mass, so the orbit block stays usable without equipment.
+  - output: orbit_lifetime_s
+    label: 軌道寿命の概算
+    formula: t = H/(ρ (C_d A/4m) √(μr))
+    inputs: [altitude_m, orbit_radius_m, earth_mu_m3s2, surface_area_m2, total_mass_kg, drag_coefficient_ratio, reference_density_kgpm3, reference_altitude_m, density_scale_height_m]
+    block: mass
+    display_divisor: 2629800
+    display_unit: か月
     summary: true
     provisional: true

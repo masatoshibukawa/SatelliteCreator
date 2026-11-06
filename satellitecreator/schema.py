@@ -19,6 +19,8 @@ UNIT_SUFFIXES = (
     "_m4",
     "_m3s2",
     "_kg",
+    "_kgpm3",
+    "_mps2",
     "_s",
     "_w",
     "_wm2",

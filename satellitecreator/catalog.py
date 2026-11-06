@@ -59,6 +59,9 @@ class ReferenceBus(Sourced):
     allowable_min_c: float
     allowable_max_c: float
     link: LinkBudget
+    design_load_g: float = Field(gt=0)
+    allowable_stress_mpa: float = Field(gt=0)
+    safety_factor: float = Field(gt=0)
     battery_voltage_v: float = Field(gt=0)
     battery_capacity_mah: float = Field(gt=0)
     charge_efficiency: float = Field(gt=0, le=1)

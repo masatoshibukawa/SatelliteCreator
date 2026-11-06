@@ -1,7 +1,7 @@
 import pytest
 
 from satellitecreator.gates import evaluate_gate
-from satellitecreator.intake import build_intake
+from satellitecreator.intake import build_intake, parse_mission_duration_s
 from satellitecreator.process import Review
 from satellitecreator.session import ReviewState, run_session
 from satellitecreator.simulation import project_ledger
@@ -80,10 +80,50 @@ def test_cdr_stays_blocked_while_any_check_has_not_run():
 
     assert cdr.state is ReviewState.BLOCKED
     assert {item.code for item in cdr.findings} == {"check_not_run"}
-    assert {item.subject for item in cdr.findings} == {
-        "margin_of_safety_positive",
-        "orbit_lifetime_covers_mission",
+    assert {item.subject for item in cdr.findings} == {"orbit_lifetime_covers_mission"}
+
+
+def test_stated_mission_duration_lets_the_design_pass_cdr():
+    answers = {**ANSWERS, "mission_duration": "3 か月"}
+
+    assert _reviews(run_session(BASE, answers))[Review.CDR].state is ReviewState.PASSED
+
+
+def test_mission_longer_than_the_orbit_lifetime_fails():
+    states = {
+        item.id: item.state
+        for item in run_session(BASE, {**ANSWERS, "mission_duration": "5 年"}).checks
     }
+
+    assert states["orbit_lifetime_covers_mission"] == "failed"
+
+
+@pytest.mark.parametrize(
+    ("text", "bare", "expected"),
+    [
+        ("ミッション期間 2 年", False, 2 * 365.25 * 86400),
+        ("運用期間は 6 か月", False, 6 * 30.4375 * 86400),
+        ("6ヶ月", True, 6 * 30.4375 * 86400),
+        ("2 年", False, None),
+        ("未定", True, None),
+        ("ミッション期間 約 2 年", False, None),
+    ],
+)
+def test_parse_mission_duration(text, bare, expected):
+    assert parse_mission_duration_s(text, bare=bare) == expected
+
+
+def test_orbit_lifetime_grows_with_altitude():
+    high = project_ledger(build_intake(BASE.replace("400 km", "600 km"), {}).project)
+
+    assert high.value("orbit_lifetime_s") > _ledger().value("orbit_lifetime_s")
+
+
+def test_margin_of_safety_is_positive_and_provisional():
+    entry = _ledger().get("margin_of_safety_ratio")
+
+    assert entry.value > 0
+    assert entry.provisional
 
 
 def test_pdr_blocks_on_a_failed_check():
