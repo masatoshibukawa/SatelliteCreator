@@ -153,3 +153,33 @@ def test_subsystem_requirements_trace_to_system_requirements():
 
     assert derived
     assert all(item.parents[0].startswith("SR-") for item in derived)
+
+
+def test_passes_that_rest_on_stand_in_values_are_marked():
+    reviews = _reviews(run_session(BASE, {**ANSWERS, "mission_duration": "3 か月"}))
+
+    assert reviews[Review.PDR].provisional
+    assert reviews[Review.CDR].provisional
+    assert not reviews[Review.SRR].provisional
+
+
+def test_unverified_subsystem_requirements_stay_assumptions():
+    result = run_session(BASE, ANSWERS)
+
+    assumed = [
+        item
+        for item in result.requirements
+        if item.id.startswith("SS-") and item.status == "assumed"
+    ]
+
+    assert {item.function for item in assumed} == {"mission", "attitude_control", "data_handling"}
+    assert all(item.rationale for item in assumed)
+
+
+def test_lifetime_stops_growing_above_the_valid_altitude():
+    at_limit = project_ledger(build_intake(BASE.replace("400 km", "600 km"), {}).project)
+    above = project_ledger(build_intake(BASE.replace("400 km", "800 km"), {}).project)
+
+    ratio = above.value("orbit_lifetime_s") / at_limit.value("orbit_lifetime_s")
+
+    assert ratio < 1.1

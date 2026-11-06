@@ -86,7 +86,7 @@ def test_form_factor_without_a_reference_bus_waits_and_says_why():
 def test_requirement_of_the_launch_vehicle_reaches_the_ledger():
     ledger = project_ledger(build_intake(PROMPT, {}).project)
 
-    assert ledger.value("required_natural_frequency_hz") == 100
+    assert ledger.value("required_natural_frequency_hz") == 50
 
 
 def test_free_rotation_has_no_sun_pointing_note():

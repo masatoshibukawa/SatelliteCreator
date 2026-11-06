@@ -9,7 +9,7 @@ from collections.abc import Mapping
 from enum import StrEnum
 
 from satellitecreator.agents import design_agents
-from satellitecreator.core.checks import CheckResult, evaluate_checks
+from satellitecreator.core.checks import CheckResult, CheckState, evaluate_checks
 from satellitecreator.design import check_scope, envelope, form_factor
 from satellitecreator.document import Document, build_document
 from satellitecreator.flowdown import with_subsystem_requirements
@@ -36,6 +36,7 @@ _REFUSED_TERMS = (
     "jamming",
 )
 _QUANTIFIABLE_QUESTIONS = frozenset({"form_factor", "altitude", "inclination", "mission_duration"})
+_ANALYSIS_REVIEWS = frozenset({Review.PDR, Review.CDR})
 _REFUSAL = "兵器、軍事用途、他の衛星への妨害に関わる設計は扱えません。"
 
 
@@ -49,6 +50,7 @@ class ReviewView(Frozen):
     review: Review
     phase: Phase
     state: ReviewState
+    provisional: bool = False
     outputs: tuple[str, ...] = ()
     findings: tuple[Finding, ...] = ()
 
@@ -81,6 +83,11 @@ def check_request(text: str) -> str | None:
 
 
 def _review_views(project: Project) -> tuple[ReviewView, ...]:
+    """PDR and CDR rest on the analysis, so a pass on stand-in values is marked provisional."""
+    stand_ins = any(
+        item.provisional and item.state is not CheckState.NOT_RUN
+        for item in evaluate_checks(project_ledger(project))
+    )
     views: tuple[ReviewView, ...] = ()
     current = project
     blocked = False
@@ -92,7 +99,8 @@ def _review_views(project: Project) -> tuple[ReviewView, ...]:
         result = evaluate_gate(current, spec.review)
         if result.passed:
             current = pass_review(current, spec.review)
-            views += (ReviewView(state=ReviewState.PASSED, **common),)
+            provisional = stand_ins and spec.review in _ANALYSIS_REVIEWS
+            views += (ReviewView(state=ReviewState.PASSED, provisional=provisional, **common),)
             continue
         blocked = True
         views += (ReviewView(state=ReviewState.BLOCKED, findings=result.findings, **common),)

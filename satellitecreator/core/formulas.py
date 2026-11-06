@@ -9,6 +9,9 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 
+# One scale height stops being valid far above its reference, so higher orbits stay at this
+# value. That understates their lifetime, which is the safe direction for the check.
+_LIFETIME_MAX_VALID_ALTITUDE_M = 600e3
 _THERMAL_TIME_STEP_S = 10.0
 _THERMAL_MAX_ORBITS = 300
 _THERMAL_PERIODIC_TOLERANCE_K = 0.001
@@ -402,8 +405,9 @@ def orbit_lifetime_s(
     density_scale_height_m: float,
 ) -> float:
     """Time for the altitude to fall by one scale height in an exponential atmosphere."""
+    valid_altitude_m = min(altitude_m, _LIFETIME_MAX_VALID_ALTITUDE_M)
     density = reference_density_kgpm3 * math.exp(
-        -(altitude_m - reference_altitude_m) / density_scale_height_m
+        -(valid_altitude_m - reference_altitude_m) / density_scale_height_m
     )
     ballistic_ratio = drag_coefficient_ratio * (surface_area_m2 / 4) / total_mass_kg
     decay_mps = density * ballistic_ratio * math.sqrt(earth_mu_m3s2 * orbit_radius_m)

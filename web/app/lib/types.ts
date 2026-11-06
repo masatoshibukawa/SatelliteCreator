@@ -24,6 +24,7 @@ export interface ReviewView {
   review: string;
   phase: string;
   state: ReviewState;
+  provisional: boolean;
   outputs: string[];
   findings: Finding[];
 }

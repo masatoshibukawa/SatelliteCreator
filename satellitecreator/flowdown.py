@@ -1,7 +1,7 @@
 """Derives subsystem requirements from settled system requirements.
 
-Each one states what the design core will check for that function, so nothing here invents a
-number. An open system requirement has nothing to flow down yet.
+Each one states what should hold for that function, so nothing here invents a number.
+An open system requirement has nothing to flow down yet.
 """
 
 from __future__ import annotations
@@ -24,6 +24,11 @@ _CHECK_TEXTS = {
     Function.THERMAL_CONTROL: "周回の温度が許容範囲に収まること",
     Function.DATA_HANDLING: "データ処理機器の消費電力が電力収支に含まれていること",
 }
+# No check in the design core verifies these yet, so they stay assumptions.
+_UNVERIFIED_FUNCTIONS = frozenset(
+    {Function.MISSION, Function.ATTITUDE_CONTROL, Function.DATA_HANDLING}
+)
+_UNVERIFIED_REASON = "設計の核にこの項目を確かめる整合チェックがまだありません"
 
 
 def with_subsystem_requirements(project: Project) -> Project:
@@ -46,7 +51,12 @@ def with_subsystem_requirements(project: Project) -> Project:
             level=RequirementLevel.SUBSYSTEM,
             kind=RequirementKind.FUNCTIONAL,
             statement=_CHECK_TEXTS[item.function],
-            status=RequirementStatus.CONFIRMED,
+            status=(
+                RequirementStatus.ASSUMED
+                if item.function in _UNVERIFIED_FUNCTIONS
+                else RequirementStatus.CONFIRMED
+            ),
+            rationale=_UNVERIFIED_REASON if item.function in _UNVERIFIED_FUNCTIONS else "",
             function=item.function,
             parents=(item.id,),
         )

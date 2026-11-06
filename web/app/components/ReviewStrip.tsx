@@ -20,13 +20,16 @@ export default function ReviewStrip({ reviews, scopeFindings }: { reviews: Revie
     <section className="panel reviews" aria-label="工程の確認">
       <h2 className="panel-title">工程の確認</h2>
       <p className="review-caption">
-        要求がそろい、つながっているかの自動確認です。設計の妥当性はまだ判定していません。
+        MDR から SDR は要求の確認、PDR と CDR は計算の確認です。実際の審査の合格ではありません。
       </p>
       <ol className="review-steps">
         {reviews.map((item) => (
           <li key={item.review} className={`review-step review-${item.state}`}>
             <strong>{item.review}</strong>
-            <span>{STATE_LABEL[item.state]}</span>
+            <span>
+              {STATE_LABEL[item.state]}
+              {item.provisional ? "（暫定）" : ""}
+            </span>
           </li>
         ))}
       </ol>

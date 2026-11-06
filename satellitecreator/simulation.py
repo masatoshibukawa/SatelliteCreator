@@ -26,10 +26,13 @@ _BLOCK_LABELS = {
 }
 _BLOCK_NOTES = {
     Block.ORBIT: "円軌道を仮定。日陰は太陽が軌道面にある最悪の場合",
-    Block.MASS: "公開資料の機器構成を目安に使用",
+    Block.MASS: "公開資料の機器構成を目安に使用。軌道寿命は指数大気の概算で 600 km までの値です",
     Block.POWER: "公開資料の機器構成を目安に使用。最短の日照で 1 周回の収支を計算",
     Block.COMMUNICATION: "公開資料の機器構成を目安に使用。仰角が最低のときの最悪値",
-    Block.STRUCTURE: "4 本のレールを片持ち梁とした概算。解析書の FEM の代わりにはなりません",
+    Block.STRUCTURE: (
+        "4 本の中実レールを片持ち梁とした横方向の概算で、実機より高めに出ます。"
+        "FEM の代わりにはなりません"
+    ),
     Block.THERMAL: (
         "衛星全体を 1 節点で計算。機器ごとの温度ではありません。"
         "高温は日陰最小と発熱最大、低温は日陰最大と発熱最小の場合"
@@ -125,7 +128,7 @@ def project_ledger(project: Project) -> Ledger:
         "envelope_width_m": size.width_m,
         "envelope_depth_m": size.depth_m,
         "envelope_length_m": size.length_m,
-        "required_natural_frequency_hz": load_launch_vehicle().longitudinal_frequency_hz,
+        "required_natural_frequency_hz": load_launch_vehicle().lateral_frequency_hz,
     }
     if design.mission_duration_s is not None:
         inputs = {**inputs, "mission_duration_s": design.mission_duration_s}
