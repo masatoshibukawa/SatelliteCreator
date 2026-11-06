@@ -144,7 +144,7 @@ def test_checklist_marks_only_what_the_project_actually_has():
     document = build_document(build_intake(PROMPT, {}).project)
 
     assert _item(document, 1).state is SectionState.PARTIAL
-    assert _item(document, 12).state is SectionState.PENDING
+    assert _item(document, 8).state is SectionState.PENDING
 
 
 def test_checklist_credits_mass_and_temperature_only_when_they_are_calculated():

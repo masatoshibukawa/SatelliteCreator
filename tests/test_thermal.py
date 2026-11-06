@@ -23,6 +23,7 @@ THREE_U = {
     "mass_margin_kg": 0.103,
     "max_consumed_power_w": 12.586,
     "min_consumed_power_w": 1.229,
+    "heater_power_w": 0.0,
     "allowable_max_temperature_k": 323.15,
     "allowable_min_temperature_k": 263.15,
 }
@@ -53,9 +54,12 @@ def _hot(power_w: float = 5.0, beta_deg: float = 60.0, eclipse_s: float = 1500.0
     )
 
 
-def _cold(power_w: float = 5.0, eclipse_s: float = 2170.0, **overrides):
+def _cold(power_w: float = 5.0, eclipse_s: float = 2170.0, heater_w: float = 0.0, **overrides):
     return orbit_min_temperature_k(
-        min_consumed_power_w=power_w, max_eclipse_s=eclipse_s, **_heat_inputs(**overrides)
+        min_consumed_power_w=power_w,
+        heater_power_w=heater_w,
+        max_eclipse_s=eclipse_s,
+        **_heat_inputs(**overrides),
     )
 
 
@@ -125,6 +129,10 @@ def test_cold_case_is_colder_than_the_hot_case():
 
 def test_cold_case_gets_colder_with_more_eclipse():
     assert _cold(eclipse_s=2500.0) < _cold(eclipse_s=1500.0)
+
+
+def test_eclipse_heater_raises_the_coldest_point():
+    assert _cold(heater_w=5.0) > _cold(heater_w=0.0)
 
 
 def test_more_internal_power_raises_the_temperature():

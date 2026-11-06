@@ -231,6 +231,7 @@ def orbit_min_temperature_k(
     earth_ir_high_absorbed_w: float,
     earth_ir_low_absorbed_w: float,
     min_consumed_power_w: float,
+    heater_power_w: float,
     surface_emissivity_ratio: float,
     surface_area_m2: float,
     stefan_boltzmann_wm2k4: float,
@@ -238,7 +239,7 @@ def orbit_min_temperature_k(
     orbit_period_s: float,
     max_eclipse_s: float,
 ) -> float:
-    """Cold case: the orbit with the most eclipse, the cooler environment, the least power."""
+    """Cold case: the most eclipse, the cooler environment, the least power, heater in eclipse."""
     pairs = _paired_environment(
         albedo_high_absorbed_w,
         albedo_low_absorbed_w,
@@ -249,7 +250,7 @@ def orbit_min_temperature_k(
     return min(
         _orbit_temperature_range(
             sun_absorbed_w + albedo_w + earth_ir_w + min_consumed_power_w,
-            earth_ir_w + min_consumed_power_w,
+            earth_ir_w + min_consumed_power_w + heater_power_w,
             surface_emissivity_ratio * stefan_boltzmann_wm2k4 * surface_area_m2,
             thermal_capacity_jpk,
             orbit_period_s,
@@ -285,6 +286,32 @@ def max_radiated_power_w(
     )
 
 
+def usable_sunlit_power_w(sunlit_generated_power_w: float, charge_efficiency_ratio: float) -> float:
+    return sunlit_generated_power_w * charge_efficiency_ratio
+
+
+def orbit_generated_energy_j(usable_sunlit_power_w: float, min_sunlight_s: float) -> float:
+    return usable_sunlit_power_w * min_sunlight_s
+
+
+def orbit_consumed_energy_j(
+    average_consumed_power_w: float,
+    heater_power_w: float,
+    orbit_period_s: float,
+    max_eclipse_s: float,
+) -> float:
+    return average_consumed_power_w * orbit_period_s + heater_power_w * max_eclipse_s
+
+
+def battery_depth_of_discharge_ratio(
+    average_consumed_power_w: float,
+    heater_power_w: float,
+    max_eclipse_s: float,
+    battery_capacity_j: float,
+) -> float:
+    return (average_consumed_power_w + heater_power_w) * max_eclipse_s / battery_capacity_j
+
+
 FORMULAS: dict[str, Callable[..., float]] = {
     function.__name__: function
     for function in (
@@ -309,5 +336,9 @@ FORMULAS: dict[str, Callable[..., float]] = {
         orbit_min_temperature_k,
         temperature_margin_k,
         max_radiated_power_w,
+        usable_sunlit_power_w,
+        orbit_generated_energy_j,
+        orbit_consumed_energy_j,
+        battery_depth_of_discharge_ratio,
     )
 }

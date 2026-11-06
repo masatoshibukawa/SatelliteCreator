@@ -1,10 +1,11 @@
 # Stand-in equipment until parts are chosen per mission. The owner accepted rough values here.
-# Every number comes from the OPT-CUBE report: masses p. 12, power p. 17, surface and limits p. 16.
+# Every number comes from the OPT-CUBE report: masses p. 12, power pp. 17 and 19, surface and
+# limits p. 16.
 reference_buses:
   - form_factor: 3U
     name: OPT-CUBE の機器構成
     source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
-    section: pp. 12, 16, 17
+    section: pp. 12, 16, 17, 19
     mass_margin_g: 102.87
     min_consumed_power_mw: 1229
     max_consumed_power_mw: 12586
@@ -12,6 +13,20 @@ reference_buses:
     surface_emissivity: 0.80
     allowable_min_c: -10
     allowable_max_c: 50
+    battery_voltage_v: 9.6
+    battery_capacity_mah: 2450
+    charge_efficiency: 0.692
+    # 表 31: 展開自由 and 太陽指向. Paddle cells are 9.8 of the 16.4 groups in 表 30.
+    sunlit_power_mw: {free_rotation: 8742.3, sun_pointing: 12667.0}
+    paddle_cell_share: {free_rotation: 0.5975609756, sun_pointing: 1.0}
+    optical_power_mw: 12586
+    optical_hours_per_day: 0.5
+    modes:
+      - {name: 待機, current_ma: 128.02, hours: {free_rotation: 20.7, sun_pointing: 5.6}}
+      - {name: 通信, current_ma: 446.56, hours: {free_rotation: 0.8, sun_pointing: 0.8}}
+      - {name: 光通信, current_ma: 1311.04, hours: {free_rotation: 0.5, sun_pointing: 0.5}}
+      - {name: 発電, current_ma: 308.02, hours: {free_rotation: 0, sun_pointing: 15.1}}
+      - {name: 姿勢制御, current_ma: 790.21, hours: {free_rotation: 2, sun_pointing: 2}}
     parts:
       - {id: MOT, group: ミッション, mass_g: 900}
       - {id: LTS, group: ミッション, mass_g: 42.73}

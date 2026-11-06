@@ -62,6 +62,7 @@ _SOURCE_TITLES = {
     ),
     "https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html": "NASA Earth Fact Sheet",
     "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-310A.pdf": "JERG-2-310A 熱制御系設計標準",
+    "https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-214A.pdf": "JERG-2-214A 電源系設計標準",
     "https://physics.nist.gov/cgi-bin/cuu/Value?sigma": "NIST, Stefan-Boltzmann constant",
     "https://tfaws.nasa.gov/wp-content/uploads/On-Orbit_Thermal_Environments_TFAWS_2014.pdf": (
         "NASA TFAWS, Introduction to On-Orbit Thermal Environments"
@@ -140,11 +141,11 @@ def _analysis_section(ledger: Ledger) -> Section:
     if not lines:
         return _pending("2", title, "軌道が決まると記載されます")
     stand_in = (
-        "質量と熱は OPT-CUBE の機器構成を目安にした暫定値です。"
+        "質量、熱、電源は OPT-CUBE の機器構成を目安にした暫定値です。"
         if (ledger.get("total_mass_kg"))
         else ""
     )
-    note = f"円軌道を仮定しています。{stand_in}電力と回線の解析は未計算です"
+    note = f"円軌道を仮定しています。{stand_in}回線の解析は未計算です"
     return Section(
         number="2", title=title, state=SectionState.PARTIAL, lines=lines, pending_note=note
     )
@@ -182,7 +183,12 @@ def _system_section(project: Project) -> Section:
         f"軌道傾斜角 {design.orbit.inclination_deg:g} 度",
     )
     choices = (
-        *((f"表面: {design.surface}（反復設計で選択）",) if design.surface else ()),
+        *(("姿勢: 太陽指向（反復設計で選択）",) if design.attitude == "sun_pointing" else ()),
+        *(
+            (f"放熱面: {design.surface}、本体の {design.radiator_ratio:.0%}（反復設計で選択）",)
+            if design.surface
+            else ()
+        ),
         *(
             (f"ヒータ: {design.heater_power_w:g} W（反復設計で追加）",)
             if design.heater_power_w
@@ -293,6 +299,9 @@ def _sections(
 def _checklist(project: Project, ledger: Ledger) -> tuple[ChecklistItem, ...]:
     design_known = SectionState.PARTIAL if project.design else SectionState.PENDING
     mass_known = SectionState.PARTIAL if ledger.get("total_mass_kg") else SectionState.PENDING
+    power_known = (
+        SectionState.PARTIAL if ledger.get("orbit_generated_energy_j") else SectionState.PENDING
+    )
     thermal_known = (
         SectionState.PARTIAL if ledger.get("temperature_margin_k") else SectionState.PENDING
     )
@@ -310,7 +319,7 @@ def _checklist(project: Project, ledger: Ledger) -> tuple[ChecklistItem, ...]:
         ("姿勢制御が可能であること", pending),
         ("軌道制御が可能であること", pending),
         ("搭載機器の温度余裕", thermal_known),
-        ("電力プロファイルとバッテリ容量", pending),
+        ("電力プロファイルとバッテリ容量", power_known),
         ("打上げロケットとのインターフェース条件", design_known),
     )
     return tuple(

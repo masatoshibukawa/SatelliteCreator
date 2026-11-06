@@ -27,13 +27,20 @@ _BLOCK_LABELS = {
 _BLOCK_NOTES = {
     Block.ORBIT: "円軌道を仮定。日陰は太陽が軌道面にある最悪の場合",
     Block.MASS: "OPT-CUBE の機器構成を目安に使用",
+    Block.POWER: "OPT-CUBE の機器構成を目安に使用。最短の日照で 1 周回の収支を計算",
     Block.THERMAL: (
         "衛星全体を 1 節点で計算。機器ごとの温度ではありません。"
         "高温は日陰最小と発熱最大、低温は日陰最大と発熱最小の場合"
     ),
 }
+# Stand-in limit: no source for this battery yet, and the inputs are marked provisional.
+_ALLOWABLE_DEPTH_OF_DISCHARGE_RATIO = 0.30
 _NEEDS_BUS_NOTE = "機器構成が必要です。今は 3U だけ登録しています"
-_WAITING_NOTES = {Block.MASS: _NEEDS_BUS_NOTE, Block.THERMAL: _NEEDS_BUS_NOTE}
+_WAITING_NOTES = {
+    Block.MASS: _NEEDS_BUS_NOTE,
+    Block.POWER: _NEEDS_BUS_NOTE,
+    Block.THERMAL: _NEEDS_BUS_NOTE,
+}
 
 
 class BlockState(StrEnum):
@@ -55,15 +62,30 @@ class BlockStatus(Frozen):
     note: str = ""
 
 
+def _blend(base: float, covering: float, covered_ratio: float) -> float:
+    return base * (1 - covered_ratio) + covering * covered_ratio
+
+
 def _bus_inputs(bus: ReferenceBus, design: SatelliteDesign) -> dict[str, float]:
+    covered_ratio = 0.0 if design.surface is None else design.radiator_ratio
     finish = None if design.surface is None else surface_finish(design.surface)
+    absorptivity = finish.absorptivity if finish else bus.surface_absorptivity
+    emissivity = finish.emissivity if finish else bus.surface_emissivity
     return {
         "parts_mass_kg": bus.parts_mass_kg,
         "mass_margin_kg": bus.mass_margin_kg,
         "max_consumed_power_w": design.peak_power_w or bus.max_consumed_power_w,
-        "min_consumed_power_w": bus.min_consumed_power_w + design.heater_power_w,
-        "surface_absorptivity_ratio": finish.absorptivity if finish else bus.surface_absorptivity,
-        "surface_emissivity_ratio": finish.emissivity if finish else bus.surface_emissivity,
+        "min_consumed_power_w": bus.min_consumed_power_w,
+        "heater_power_w": design.heater_power_w,
+        "sunlit_generated_power_w": bus.sunlit_generated_power_w(design.attitude, covered_ratio),
+        "charge_efficiency_ratio": bus.charge_efficiency,
+        "average_consumed_power_w": bus.average_consumed_power_w(
+            design.attitude, design.peak_power_w
+        ),
+        "battery_capacity_j": bus.battery_capacity_j,
+        "allowable_depth_of_discharge_ratio": _ALLOWABLE_DEPTH_OF_DISCHARGE_RATIO,
+        "surface_absorptivity_ratio": _blend(bus.surface_absorptivity, absorptivity, covered_ratio),
+        "surface_emissivity_ratio": _blend(bus.surface_emissivity, emissivity, covered_ratio),
         "allowable_max_temperature_k": bus.allowable_max_temperature_k,
         "allowable_min_temperature_k": bus.allowable_min_temperature_k,
     }

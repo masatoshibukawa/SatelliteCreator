@@ -51,7 +51,7 @@ def test_orbit_block_waits_for_its_input():
 def test_blocks_without_equations_say_they_are_not_built():
     statuses = _statuses(PROMPT)
 
-    for block in (Block.POWER, Block.COMMUNICATION, Block.STRUCTURE):
+    for block in (Block.COMMUNICATION, Block.STRUCTURE):
         assert statuses[block].state is BlockState.NOT_BUILT
         assert statuses[block].values == ()
 

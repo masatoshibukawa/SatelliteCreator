@@ -22,6 +22,18 @@ inputs:
     label: 最大の消費電力
   - key: min_consumed_power_w
     label: 最小の消費電力
+  - key: heater_power_w
+    label: ヒータの電力
+  - key: sunlit_generated_power_w
+    label: 日照中の発電電力
+  - key: charge_efficiency_ratio
+    label: 充電効率
+  - key: average_consumed_power_w
+    label: 平均の消費電力
+  - key: battery_capacity_j
+    label: バッテリのエネルギー
+  - key: allowable_depth_of_discharge_ratio
+    label: 許容放電深度
   - key: surface_absorptivity_ratio
     label: 表面の太陽光吸収率
   - key: surface_emissivity_ratio
@@ -33,8 +45,6 @@ inputs:
 
 # Named by checks already. Each one moves to `equations` when its block is built.
 planned_quantities:
-  - orbit_generated_energy_j
-  - orbit_consumed_energy_j
   - link_margin_db
   - margin_of_safety_ratio
   - natural_frequency_hz
@@ -190,7 +200,7 @@ equations:
   - output: orbit_min_temperature_k
     label: 周回の最低温度
     formula: C dT/dt = Q - εσAT⁴（日陰最大、発熱最小）
-    inputs: [sun_absorbed_w, albedo_high_absorbed_w, albedo_low_absorbed_w, earth_ir_high_absorbed_w, earth_ir_low_absorbed_w, min_consumed_power_w, surface_emissivity_ratio, surface_area_m2, stefan_boltzmann_wm2k4, thermal_capacity_jpk, orbit_period_s, max_eclipse_s]
+    inputs: [sun_absorbed_w, albedo_high_absorbed_w, albedo_low_absorbed_w, earth_ir_high_absorbed_w, earth_ir_low_absorbed_w, min_consumed_power_w, heater_power_w, surface_emissivity_ratio, surface_area_m2, stefan_boltzmann_wm2k4, thermal_capacity_jpk, orbit_period_s, max_eclipse_s]
     block: thermal
     display_offset: -273.15
     display_unit: ℃
@@ -212,3 +222,42 @@ equations:
     summary: true
     source: https://tfaws.nasa.gov/wp-content/uploads/On-Orbit_Thermal_Environments_TFAWS_2014.pdf
     section: p. 16
+
+  # Power: the OPT-CUBE static balance (p. 19, 表 31) per orbit, with the shortest sunlight.
+  - output: usable_sunlit_power_w
+    label: 利用できる発電電力
+    formula: P_u = P_g η
+    inputs: [sunlit_generated_power_w, charge_efficiency_ratio]
+    block: power
+    source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
+    section: p. 19, 表 31
+  - output: orbit_generated_energy_j
+    label: 1 周回の発電量
+    formula: E_g = P_u T_s
+    inputs: [usable_sunlit_power_w, min_sunlight_s]
+    block: power
+    display_divisor: 1000
+    display_unit: kJ
+    summary: true
+    source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
+    section: p. 19, 表 31
+  - output: orbit_consumed_energy_j
+    label: 1 周回の消費量
+    formula: E_c = P_a T + P_h T_e
+    inputs: [average_consumed_power_w, heater_power_w, orbit_period_s, max_eclipse_s]
+    block: power
+    display_divisor: 1000
+    display_unit: kJ
+    summary: true
+    source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
+    section: p. 19, 表 31
+  - output: battery_depth_of_discharge_ratio
+    label: 放電深度
+    formula: DOD = (P_a + P_h) T_e / E_b
+    inputs: [average_consumed_power_w, heater_power_w, max_eclipse_s, battery_capacity_j]
+    block: power
+    display_divisor: 0.01
+    display_unit: "%"
+    summary: true
+    source: https://sma.jaxa.jp/TechDoc/Docs/JAXA-JERG-2-214A.pdf
+    section: （54）放電深度
