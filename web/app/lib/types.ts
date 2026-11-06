@@ -15,6 +15,7 @@ export interface Question {
   text: string;
   answer: string;
   from_prompt: boolean;
+  assumed: boolean;
   unreadable: boolean;
   answered: boolean;
 }

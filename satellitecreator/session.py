@@ -19,6 +19,7 @@ from satellitecreator.iteration import DesignLoopResult, run_design_loop
 from satellitecreator.launch_request import LaunchRequest, build_launch_request
 from satellitecreator.process import Phase, Review, load_review_specs
 from satellitecreator.project import Project
+from satellitecreator.quantify import draft_answers, requirement_reader
 from satellitecreator.requirements import Requirement
 from satellitecreator.schema import Finding, Frozen
 from satellitecreator.simulation import BlockStatus, block_statuses, project_ledger
@@ -34,6 +35,7 @@ _REFUSED_TERMS = (
     "missile",
     "jamming",
 )
+_QUANTIFIABLE_QUESTIONS = frozenset({"form_factor", "altitude", "inclination", "mission_duration"})
 _REFUSAL = "兵器、軍事用途、他の衛星への妨害に関わる設計は扱えません。"
 
 
@@ -110,11 +112,29 @@ def _satellite_view(form_factor_id: str | None) -> SatelliteView | None:
     )
 
 
+def _with_claude_assumptions(
+    prompt: str, answers: Mapping[str, str]
+) -> tuple[Mapping[str, str], dict[str, str]]:
+    """Fills only what neither the request nor the user settled. Calls Claude only if needed."""
+    reader = requirement_reader()
+    if reader is None:
+        return answers, {}
+    questions = build_intake(prompt, answers).questions
+    unsettled = {item.id for item in questions if not item.answered} & _QUANTIFIABLE_QUESTIONS
+    draft = reader.read(prompt) if unsettled else None
+    if draft is None:
+        return answers, {}
+    suggested, reasons = draft_answers(draft)
+    picked = {key: value for key, value in suggested.items() if key in unsettled}
+    return {**answers, **picked}, {key: reasons[key] for key in picked}
+
+
 def run_session(prompt: str, answers: Mapping[str, str]) -> SessionResult:
     refusal = check_request(" ".join((prompt, *answers.values())))
     if refusal:
         return SessionResult(refusal=refusal)
-    intake = build_intake(prompt, answers)
+    filled_answers, assumed = _with_claude_assumptions(prompt, answers)
+    intake = build_intake(prompt, filled_answers, assumed)
     loop = run_design_loop(intake.project, agents=design_agents())
     project = with_subsystem_requirements(loop.project)
     ledger = project_ledger(project)

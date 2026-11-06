@@ -95,6 +95,11 @@ function AnswerForm({
   );
 }
 
+function questionRole(question: Question): string {
+  if (question.assumed) return "Claude の仮定（回答すると上書きできます）";
+  return question.from_prompt ? "要求から読み取り" : "回答済み";
+}
+
 export default function PromptPanel({ prompt, result, status, error, onSubmit, onAnswer, onReset }: PromptPanelProps) {
   const logRef = useRef<HTMLDivElement | null>(null);
   const busy = status === "loading";
@@ -125,7 +130,7 @@ export default function PromptPanel({ prompt, result, status, error, onSubmit, o
         </div>
         {answered.map((question) => (
           <div key={question.id} className="msg msg-answered">
-            <span className="msg-role">{question.from_prompt ? "要求から読み取り" : "回答済み"}</span>
+            <span className="msg-role">{questionRole(question)}</span>
             <span className="msg-question-text">{question.text}</span>
             <span>{question.answer}</span>
           </div>

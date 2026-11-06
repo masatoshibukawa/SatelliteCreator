@@ -35,7 +35,7 @@ uv run pytest
 uv run python -m satellitecreator.launch_request --prompt "$(cat examples/opt_cube/request.txt)" --name OPT-CUBE --output launch_request.json
 ```
 
-反復設計はコマンドでも動きます。`DesignAgent` を実装すれば、エージェントを追加、交換できます。既定では規則で動く熱のエージェントを使い、API を呼びません。Claude のエージェントは次のように有効にします。検査が不合格のときだけ、1 回の反復で最大 3 回、Claude Haiku 5.5 を呼びます。
+反復設計はコマンドでも動きます。`DesignAgent` を実装すれば、エージェントを追加、交換できます。既定では規則で動く熱のエージェントを使い、API を呼びません。Claude のエージェントは次のように有効にします。検査が不合格のときだけ、1 回の反復で最大 3 回、Claude Haiku 5.5 を呼びます。要求文に明記されていない大きさ、高度、傾斜角、ミッション期間も Claude が提案し、理由つきの「仮定」として記録します。提案は要求文 1 件につき 1 回の呼び出しで、回答すると上書きできます。
 
 ```bash
 SATELLITECREATOR_USE_CLAUDE=1 SATELLITECREATOR_ENV_FILE=../RocketCreater/.env ./scripts/dev.sh

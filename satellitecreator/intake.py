@@ -67,6 +67,7 @@ _QUESTIONS = {
     "mission_duration": "ミッション期間はどのくらいですか？（例：6 か月、2 年）",
 }
 QUESTION_IDS = tuple(_QUESTIONS)
+_ASSUMABLE_REQUIREMENTS = {"altitude": "SR-001", "inclination": "SR-002", "form_factor": "SR-003"}
 
 _FUNCTION_QUESTIONS = (
     ("mission_payload", Function.MISSION, "ミッション機器への要求"),
@@ -87,6 +88,7 @@ class QuestionState(Frozen):
     text: str
     answer: str = ""
     from_prompt: bool = False
+    assumed: bool = False
     unreadable: bool = False
 
     @computed_field
@@ -315,7 +317,34 @@ def _design(
     )
 
 
-def build_intake(prompt: str, answers: Mapping[str, str]) -> Intake:
+def _apply_assumptions(
+    project: Project,
+    questions: tuple[QuestionState, ...],
+    assumed: Mapping[str, str],
+) -> tuple[Project, tuple[QuestionState, ...]]:
+    """Marks values that came from an assumption instead of the user."""
+    reasons = {
+        _ASSUMABLE_REQUIREMENTS[key]: reason
+        for key, reason in assumed.items()
+        if key in _ASSUMABLE_REQUIREMENTS
+    }
+    requirements = tuple(
+        item.model_copy(update={"status": RequirementStatus.ASSUMED, "rationale": reasons[item.id]})
+        if item.id in reasons and item.status is RequirementStatus.CONFIRMED
+        else item
+        for item in project.requirements
+    )
+    marked = tuple(
+        item.model_copy(update={"assumed": True}) if item.id in assumed else item
+        for item in questions
+    )
+    return project.model_copy(update={"requirements": requirements}), marked
+
+
+def build_intake(
+    prompt: str, answers: Mapping[str, str], assumed: Mapping[str, str] | None = None
+) -> Intake:
+    """`assumed` names answers that are assumptions, with the reason for each."""
     unknown = sorted(set(answers) - set(QUESTION_IDS))
     if unknown:
         raise UnknownQuestionError(f"unknown question ids: {unknown}")
@@ -370,6 +399,7 @@ def build_intake(prompt: str, answers: Mapping[str, str]) -> Intake:
         ),
     )
     questions = (form_question, altitude[0], inclination[0], *free_text.values(), duration[0])
+    project, questions = _apply_assumptions(project, questions, assumed or {})
     return Intake(project=project, questions=questions, form_factor=form_factor_id)
 
 
