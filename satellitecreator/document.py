@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from satellitecreator.catalog import load_reference_buses
+from satellitecreator.catalog import load_reference_buses, reference_bus
 from satellitecreator.core.ledger import Ledger
 from satellitecreator.core.registry import load_constants, load_equations
 from satellitecreator.design import (
@@ -72,6 +72,9 @@ _SOURCE_TITLES = {
         "NASA TFAWS, Introduction to On-Orbit Thermal Environments"
     ),
     "https://www.satcon.jp/history/prize22/pdf/22_asj.pdf": "OPT-CUBE 解析書（第22回）",
+    "https://www.space.pitt.edu/sites/default/files/2024-10/Arnold_AERO12.pdf": (
+        "Arnold et al., Energy Budgeting for CubeSats（M-Cubed の電力収支）"
+    ),
     "https://www.preprints.org/manuscript/202404.0391": (
         "Okuyama, 超小型衛星の固有振動数に関する論文（H-IIA の要求を引用）"
     ),
@@ -145,7 +148,7 @@ def _analysis_section(ledger: Ledger) -> Section:
     if not lines:
         return _pending("2", title, "軌道が決まると記載されます")
     stand_in = (
-        "質量、熱、電源、回線は OPT-CUBE の機器構成を目安にした暫定値です。"
+        "質量、熱、電源、回線は公開資料の機器構成を目安にした暫定値です。"
         if (ledger.get("total_mass_kg"))
         else ""
     )
@@ -186,7 +189,9 @@ def _system_section(project: Project) -> Section:
         f"軌道: 高度 {design.orbit.altitude_m / 1000:g} km、"
         f"軌道傾斜角 {design.orbit.inclination_deg:g} 度",
     )
+    bus = reference_bus(design.form_factor)
     choices = (
+        *((f"機器構成の目安: {bus.name}",) if bus else ()),
         *(
             ("姿勢: 太陽指向（反復設計で選択。熱の計算には未反映）",)
             if design.attitude == "sun_pointing"

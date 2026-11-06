@@ -26,9 +26,9 @@ _BLOCK_LABELS = {
 }
 _BLOCK_NOTES = {
     Block.ORBIT: "円軌道を仮定。日陰は太陽が軌道面にある最悪の場合",
-    Block.MASS: "OPT-CUBE の機器構成を目安に使用",
-    Block.POWER: "OPT-CUBE の機器構成を目安に使用。最短の日照で 1 周回の収支を計算",
-    Block.COMMUNICATION: "OPT-CUBE の S 帯 50 kbps を目安に使用。仰角が最低のときの最悪値",
+    Block.MASS: "公開資料の機器構成を目安に使用",
+    Block.POWER: "公開資料の機器構成を目安に使用。最短の日照で 1 周回の収支を計算",
+    Block.COMMUNICATION: "公開資料の機器構成を目安に使用。仰角が最低のときの最悪値",
     Block.STRUCTURE: "4 本のレールを片持ち梁とした概算。解析書の FEM の代わりにはなりません",
     Block.THERMAL: (
         "衛星全体を 1 節点で計算。機器ごとの温度ではありません。"
@@ -39,7 +39,7 @@ _BLOCK_NOTES = {
 _ALLOWABLE_DEPTH_OF_DISCHARGE_RATIO = 0.30
 _SUN_POINTING_THERMAL_NOTE = "太陽指向は熱の計算に未反映で、自由回転のままです"
 _STANDARD_GRAVITY_MPS2 = 9.80665
-_NEEDS_BUS_NOTE = "機器構成が必要です。今は 3U だけ登録しています"
+_NEEDS_BUS_NOTE = "機器構成が必要です。今は 1U と 3U だけ登録しています"
 _WAITING_NOTES = {
     Block.MASS: _NEEDS_BUS_NOTE,
     Block.POWER: _NEEDS_BUS_NOTE,

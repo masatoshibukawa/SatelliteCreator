@@ -88,8 +88,8 @@ def test_stand_in_note_appears_only_when_mass_and_thermal_were_calculated():
     with_bus = _section(build_document(build_intake(PROMPT, {}).project), "2")
     without_bus = _section(build_document(build_intake(prompt, {}).project), "2")
 
-    assert "OPT-CUBE" in with_bus.pending_note
-    assert "OPT-CUBE" not in without_bus.pending_note
+    assert "目安" in with_bus.pending_note
+    assert "目安" not in without_bus.pending_note
 
 
 def test_mission_analysis_is_pending_without_an_orbit():

@@ -11,6 +11,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from satellitecreator.catalog import reference_bus
 from satellitecreator.design import envelope
 from satellitecreator.intake import build_intake
 from satellitecreator.project import Project
@@ -65,7 +66,8 @@ def build_launch_request(
         return None
     size = envelope(design.form_factor)
     altitude_source = f"{_requirement_source(project, 'altitude_m')}（円軌道を仮定）"
-    mass_source = f"計算 total_mass_kg: {mass.formula}（{mass.source} {mass.section}）"
+    bus = reference_bus(design.form_factor)
+    mass_source = f"計算 total_mass_kg: {mass.formula}（{bus.source} {bus.mass_section}）"
     return LaunchRequest(
         satellite_name=satellite_name or project.name,
         payload_mass_kg=round(mass.value, _MASS_DIGITS),

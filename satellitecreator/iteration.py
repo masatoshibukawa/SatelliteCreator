@@ -31,7 +31,7 @@ _RADIATOR_STEP_RATIO = 0.1
 _RATIO_TOLERANCE = 1e-9
 MAX_HEATER_W = 10.0
 _NEEDS_BUS_QUESTION = (
-    "搭載機器の質量と消費電力を教えてください。今は 3U の機器構成だけ登録しています"
+    "搭載機器の質量と消費電力を教えてください。今は 1U と 3U の機器構成だけ登録しています"
 )
 
 
@@ -141,7 +141,9 @@ class PowerAgent:
         short_of_energy = generated_j < consumed_j
         if not short_of_energy:
             return None
-        if project.design.attitude == "sun_pointing":
+        bus = reference_bus(project.design.form_factor)
+        pointing_helps = bus.sunlit_power_mw["sun_pointing"] > bus.sunlit_power_mw["free_rotation"]
+        if project.design.attitude == "sun_pointing" or not pointing_helps:
             return None
         text = f"1 周回で {(consumed_j - generated_j) / 1000:.1f} kJ 不足。太陽指向に変更"
         return DesignChange(

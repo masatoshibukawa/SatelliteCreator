@@ -6,6 +6,7 @@ reference_buses:
     name: OPT-CUBE の機器構成
     source: https://www.satcon.jp/history/prize22/pdf/22_asj.pdf
     section: pp. 12, 16, 17, 19, 24
+    mass_section: p. 12, 表 16
     mass_margin_g: 102.87
     min_consumed_power_mw: 1229
     max_consumed_power_mw: 12586
@@ -65,6 +66,62 @@ reference_buses:
       - {id: SCP, group: 電源, mass_g: 152.04}
       - {id: screws, group: その他, mass_g: 150}
       - {id: adhesive, group: その他, mass_g: 50}
+  # Based on the published M-Cubed 1U power budget (Table 4), without its COVE payload.
+  # Power and battery come from that table. Everything else is a stand-in, so the bus is
+  # provisional. Nothing here is scaled from the 3U bus.
+  - form_factor: 1U
+    name: M-Cubed の電力収支を基にした 1U 構成
+    source: https://www.space.pitt.edu/sites/default/files/2024-10/Arnold_AERO12.pdf
+    section: Table 4
+    mass_section: 質量は暫定値
+    provisional: true
+    notes: Masses, link values, charge efficiency and the sunlit power split are stand-ins.
+    mass_margin_g: 150
+    min_consumed_power_mw: 1060
+    max_consumed_power_mw: 3413
+    # Material values of 表 23 and the electronics limits assumed on p. 16 of the OPT-CUBE report.
+    surface_absorptivity: 0.92
+    surface_emissivity: 0.80
+    allowable_min_c: -10
+    allowable_max_c: 50
+    link:
+      frequency_hz: 437000000
+      rate_bps: 9600
+      transmit_power_db: 27
+      transmit_feed_loss_db: 1
+      transmit_antenna_gain_db: 2
+      pointing_loss_db: 3
+      receive_antenna_gain_db: 14
+      receive_feed_loss_db: 1
+      noise_density_db: -168.6
+      other_loss_db: 3
+      required_ebno_db: 10
+      min_elevation_deg: 5
+    design_load_g: 8.66
+    allowable_stress_mpa: 226
+    safety_factor: 1.5
+    battery_voltage_v: 3.7
+    battery_capacity_mah: 4205.4
+    charge_efficiency: 0.9
+    # 2010 mW read as the orbit average, so about 3300 mW in sunlight. Body-mounted cells only:
+    # pointing one face at the Sun gives less than the 1.5 faces a tumbling cube shows on average.
+    sunlit_power_mw: {free_rotation: 3300, sun_pointing: 2200}
+    paddle_cell_share: {free_rotation: 0, sun_pointing: 0}
+    optical_power_mw: 3413
+    optical_hours_per_day: 1
+    modes:
+      - {name: 待機, current_ma: 286.49, hours: {free_rotation: 23, sun_pointing: 23}}
+      - {name: 通信と撮影, current_ma: 922.43, hours: {free_rotation: 1, sun_pointing: 1}}
+    parts:
+      - {id: structure, group: 構体, mass_g: 280}
+      - {id: solar-panels, group: 電源, mass_g: 120}
+      - {id: batteries, group: 電源, mass_g: 180}
+      - {id: cdh, group: データ処理, mass_g: 60}
+      - {id: radio, group: 通信, mass_g: 80}
+      - {id: antennas, group: 通信, mass_g: 30}
+      - {id: camera, group: ミッション, mass_g: 20}
+      - {id: magnets, group: 姿勢制御, mass_g: 20}
+      - {id: harness, group: その他, mass_g: 60}
 
 # Finishes the design loop may choose from. Values from the OPT-CUBE report, p. 16, 表 23.
 surface_finishes:

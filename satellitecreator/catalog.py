@@ -50,6 +50,7 @@ class SurfaceFinish(Sourced):
 class ReferenceBus(Sourced):
     form_factor: str
     name: str
+    mass_section: str
     parts: tuple[Part, ...]
     mass_margin_g: float = Field(ge=0)
     min_consumed_power_mw: float = Field(gt=0)
