@@ -216,3 +216,65 @@ def test_markdown_has_every_chapter_and_marks_pending_ones():
     assert "## 7" in document.markdown
     assert "未計算" in document.markdown
     assert "https://www.satcon.jp/contest/doc/1_boshu26.pdf" in document.markdown
+
+
+def test_system_section_lists_the_equipment_mass_by_group():
+    document = build_document(build_intake(PROMPT, {}).project)
+
+    section = _section(document, "5.1")
+    text = "\n".join(section.lines)
+
+    assert "ミッション: 961.7 g（MOT、LTS、SCC）" in text
+    assert "質量余裕: 102.9 g" in text
+    assert "寸法と配置" in section.pending_note
+
+
+def test_system_section_without_a_bus_lists_no_equipment():
+    document = build_document(build_intake("高度 500 km、傾斜角 97 度の 6U 衛星", {}).project)
+
+    section = _section(document, "5.1")
+
+    assert not any("質量余裕" in line for line in section.lines)
+    assert "搭載機器" in section.pending_note
+
+
+def test_subsystem_section_shows_calculated_results_beside_the_requirements():
+    document = build_document(build_intake(PROMPT, {}).project)
+
+    section = _section(document, "5.3")
+    text = "\n".join(section.lines)
+
+    assert "通信系の結果: 回線マージン:" in text
+    assert "電源系の結果: 1 周回の発電量:" in text
+    assert "熱制御系の結果: 周回の最高温度:" in text
+    assert "構体系の結果: 安全余裕の概算:" in text
+    assert "未計算" not in section.pending_note
+    assert "姿勢制御系" in section.pending_note
+
+
+def test_subsystem_section_has_no_results_without_a_bus():
+    document = build_document(build_intake("高度 500 km、傾斜角 97 度の 6U 衛星", {}).project)
+
+    assert not any("通信系の結果" in line for line in _section(document, "5.3").lines)
+
+
+def test_ground_section_reports_the_link_from_the_bus_and_the_ledger():
+    document = build_document(build_intake(PROMPT, {}).project)
+
+    section = _section(document, "5.4")
+    text = "\n".join(section.lines)
+
+    assert section.state is SectionState.PARTIAL
+    assert "周波数 2.285 GHz" in text
+    assert "伝送速度 50 kbps" in text
+    assert "最低仰角 5 度" in text
+    assert "回線マージン:" in text
+
+
+def test_ground_section_stays_pending_without_a_link_calculation():
+    document = build_document(build_intake("高度 500 km、傾斜角 97 度の 6U 衛星", {}).project)
+
+    section = _section(document, "5.4")
+
+    assert section.state is SectionState.PENDING
+    assert section.lines == ()

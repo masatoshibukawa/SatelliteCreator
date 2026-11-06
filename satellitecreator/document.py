@@ -18,6 +18,11 @@ from satellitecreator.design import (
     load_launch_vehicle,
     load_scope_limits,
 )
+from satellitecreator.document_results import (
+    equipment_lines,
+    ground_link_lines,
+    subsystem_result_lines,
+)
 from satellitecreator.process import load_review_specs
 from satellitecreator.project import Project, SuccessLevel
 from satellitecreator.requirements import Function, RequirementLevel, RequirementStatus
@@ -208,9 +213,11 @@ def _system_section(project: Project) -> Section:
             else ()
         ),
     )
-    lines = (*lines, *choices)
+    equipment = equipment_lines(bus) if bus else ()
+    lines = (*lines, *choices, *equipment)
     out_of_scope = "、".join(item.message for item in check_scope(design))
-    note = out_of_scope or "搭載機器と質量配分は未計算です"
+    missing = "機器の寸法と配置は未検討です" if bus else "搭載機器と質量配分は未計算です"
+    note = out_of_scope or missing
     return Section(
         number="5.1", title=title, state=SectionState.PARTIAL, lines=lines, pending_note=note
     )
@@ -234,7 +241,7 @@ def _launch_section(project: Project) -> Section:
     )
 
 
-def _subsystem_section(project: Project) -> Section:
+def _subsystem_section(project: Project, ledger: Ledger) -> Section:
     title = "サブシステムの設計結果"
     requirements = project.at_level(RequirementLevel.SYSTEM)
     if not requirements:
@@ -244,9 +251,29 @@ def _subsystem_section(project: Project) -> Section:
         f"（{_STATUS_LABELS[item.status]}）"
         for item in requirements
     )
-    note = "記載しているのは要求です。解析の結果は 2 章にあり、応力の解析は未計算です"
+    results = subsystem_result_lines(ledger, _SUBSYSTEM_LABELS)
+    note = "姿勢制御系とデータ処理系は要求だけで、解析はありません"
     return Section(
-        number="5.3", title=title, state=SectionState.PARTIAL, lines=lines, pending_note=note
+        number="5.3",
+        title=title,
+        state=SectionState.PARTIAL,
+        lines=(*lines, *results),
+        pending_note=note,
+    )
+
+
+def _ground_section(project: Project, ledger: Ledger) -> Section:
+    title = "データ取得のための地上系との関連"
+    bus = reference_bus(project.design.form_factor) if project.design else None
+    if bus is None or ledger.get("link_margin_db") is None:
+        return _pending("5.4", title, "機器構成と軌道が決まると記載されます")
+    note = "地上局の条件は公開資料の値を目安にしています。可視時間とデータ量は未計算です"
+    return Section(
+        number="5.4",
+        title=title,
+        state=SectionState.PARTIAL,
+        lines=ground_link_lines(bus, ledger),
+        pending_note=note,
     )
 
 
@@ -290,8 +317,8 @@ def _sections(
         _pending("4", "主張したい独創性または社会的効果", "対話の項目に追加すると記載されます"),
         _system_section(project),
         _launch_section(project),
-        _subsystem_section(project),
-        _pending("5.4", "データ取得のための地上系との関連", "回線の計算を実装すると記載されます"),
+        _subsystem_section(project, ledger),
+        _ground_section(project, ledger),
         _operations_section(project),
         _pending(
             "6",
