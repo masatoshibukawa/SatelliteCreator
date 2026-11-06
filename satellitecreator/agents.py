@@ -10,6 +10,7 @@ Off by default. Set SATELLITECREATOR_USE_CLAUDE=1 and ANTHROPIC_API_KEY to enabl
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import sys
 from collections.abc import Sequence
@@ -37,8 +38,10 @@ from satellitecreator.iteration import (
 )
 from satellitecreator.project import Project
 
+logger = logging.getLogger(__name__)
+
 MODEL = "claude-haiku-5-5"
-MAX_TOKENS = 512
+MAX_TOKENS = 1024
 MAX_CALLS_PER_LOOP = 3
 MAX_CALLS_PER_PROCESS = 30
 _REQUEST_TIMEOUT_S = 20.0
@@ -46,7 +49,7 @@ _MAX_REASON_LENGTH = 80
 _AGENT_NAME = "熱（Claude）"
 _SYSTEM = (
     "You are the thermal engineer of a CubeSat design team. Choose one design move that fixes "
-    "the temperature problem. For a hot problem set a radiator patch: `surface` is its material "
+    "the temperature problem. For a hot problem set a radiator patch: `surface` is its material name only "
     "and `radiator_ratio` the share of the body it covers, from 0 to 1. For a cold problem raise "
     "`heater_power_w`. A radiator removes body solar cells and makes the cold case colder, and "
     "heater power uses energy, so use the least that works. "
@@ -92,7 +95,9 @@ class ClaudeThermalAgent:
         self._model = model
         self._fallback = ThermalAgent()
         self._answers: dict[str, ThermalMove | None] = {}
+        self._failures: dict[str, str] = {}
         self.spent_calls = 0
+        self.stop_reasons: tuple[str, ...] = ()
         self.input_tokens = 0
         self.output_tokens = 0
 
@@ -102,8 +107,15 @@ class ClaudeThermalAgent:
         rule_change = self._fallback.review(project, ledger, history)
         if rule_change is None:
             return None
-        move = self._move(_prompt(project, ledger), history)
-        return self._apply(move, project, rule_change) or rule_change
+        prompt = _prompt(project, ledger)
+        move = self._move(prompt, history)
+        if move is None:
+            return _with_note(rule_change, self._failures.get(prompt, ""))
+        verdict = self._judge(move, project, rule_change)
+        if isinstance(verdict, DesignChange):
+            return verdict
+        logger.warning("Claude move rejected: %s", verdict)
+        return _with_note(rule_change, verdict)
 
     def _move(self, prompt: str, history: tuple[IterationRecord, ...]) -> ThermalMove | None:
         if prompt in self._answers:
@@ -119,51 +131,76 @@ class ClaudeThermalAgent:
         return move
 
     def _ask(self, prompt: str) -> ThermalMove | None:
+        """Any failure here falls back to the rules, so one answer cannot stop the session."""
         try:
             response = self._client.messages.parse(
                 model=self._model,
                 max_tokens=MAX_TOKENS,
+                thinking={"type": "disabled"},
                 output_config={"effort": "low"},
                 system=_SYSTEM,
                 messages=[{"role": "user", "content": prompt}],
                 output_format=ThermalMove,
             )
-        except anthropic.APIError as error:
-            sys.stderr.write(f"Claude agent fell back to the rules: {type(error).__name__}\n")
+        except (anthropic.AnthropicError, ValueError) as error:
+            self._failures[prompt] = f"{type(error).__name__} のため"
+            logger.warning("Claude call failed: %s", type(error).__name__)
             return None
         self.input_tokens += response.usage.input_tokens
         self.output_tokens += response.usage.output_tokens
+        self.stop_reasons = (*self.stop_reasons, str(response.stop_reason))
+        if response.parsed_output is None:
+            self._failures[prompt] = f"応答なし（{response.stop_reason}）"
         return response.parsed_output
 
-    def _apply(
-        self, move: ThermalMove | None, project: Project, rule_change: DesignChange
-    ) -> DesignChange | None:
-        """Accepts a move only if it answers the problem the rule agent diagnosed."""
-        if move is None:
-            return None
+    def _judge(
+        self, move: ThermalMove, project: Project, rule_change: DesignChange
+    ) -> DesignChange | str:
+        """Returns the change, or why the move does not answer the diagnosed problem."""
         design = project.design
         too_cold = rule_change.project.design.heater_power_w > design.heater_power_w
         message = AgentMessage(agent=_AGENT_NAME, text=move.reason[:_MAX_REASON_LENGTH])
-        if move.action == "surface" and not too_cold:
-            usable = {
-                item.name for item in load_surface_finishes() if item.absorptivity < item.emissivity
-            }
-            current_ratio = design.radiator_ratio if design.surface else 0.0
-            ratio = move.radiator_ratio
-            if move.surface not in usable or ratio is None or not current_ratio < ratio <= 1:
-                return None
-            return DesignChange(
-                message=message,
-                project=with_design(project, surface=move.surface, radiator_ratio=ratio),
-            )
-        if move.action == "heater" and too_cold:
+        if move.action == "surface":
+            return self._judge_surface(move, project, too_cold, message)
+        if move.action == "heater":
+            if not too_cold:
+                return "高温の問題にヒータを提案"
             power_w = move.heater_power_w
             if power_w is None or not design.heater_power_w < power_w <= MAX_HEATER_W:
-                return None
+                return f"ヒータ {power_w} W は範囲外"
             return DesignChange(
                 message=message, project=with_design(project, heater_power_w=power_w)
             )
-        return None
+        return "変更なしを提案"
+
+    def _judge_surface(
+        self, move: ThermalMove, project: Project, too_cold: bool, message: AgentMessage
+    ) -> DesignChange | str:
+        if too_cold:
+            return "低温の問題に放熱面を提案"
+        design = project.design
+        usable = {
+            item.name for item in load_surface_finishes() if item.absorptivity < item.emissivity
+        }
+        # The model sometimes copies the whole list entry, such as "黒塗り(α0.67,ε0.89)".
+        surface = (move.surface or "").split("(")[0].strip()
+        if surface not in usable:
+            return f"{move.surface} は放熱面に使えない"
+        current_ratio = design.radiator_ratio if design.surface else 0.0
+        ratio = move.radiator_ratio
+        if ratio is None or not current_ratio < ratio <= 1:
+            return f"面積比 {ratio} は現在の {current_ratio:.2f} より大きくない"
+        return DesignChange(
+            message=message,
+            project=with_design(project, surface=surface, radiator_ratio=ratio),
+        )
+
+
+def _with_note(change: DesignChange, reason: str) -> DesignChange:
+    if not reason:
+        return change
+    text = f"{change.message.text}（Claude の案を不採用: {reason}）"
+    return change.model_copy(update={"message": change.message.model_copy(update={"text": text})})
 
 
 @cache
@@ -191,7 +228,8 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover
             sys.stdout.write(f"   {message.agent}: {message.text}\n")
     sys.stdout.write(
         f"結果: {result.status}、API {agent.spent_calls} 回、"
-        f"入力 {agent.input_tokens} / 出力 {agent.output_tokens} トークン\n"
+        f"入力 {agent.input_tokens} / 出力 {agent.output_tokens} トークン、"
+        f"stop_reason {agent.stop_reasons}\n"
     )
     return 0
 

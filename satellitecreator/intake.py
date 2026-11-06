@@ -72,6 +72,10 @@ _FUNCTION_QUESTIONS = (
 )
 
 
+class UnknownQuestionError(ValueError):
+    """An answer names a question that does not exist, which is the caller's mistake."""
+
+
 class QuestionState(Frozen):
     id: str
     text: str
@@ -291,7 +295,7 @@ def _design(
 def build_intake(prompt: str, answers: Mapping[str, str]) -> Intake:
     unknown = sorted(set(answers) - set(QUESTION_IDS))
     if unknown:
-        raise ValueError(f"unknown question ids: {unknown}")
+        raise UnknownQuestionError(f"unknown question ids: {unknown}")
 
     form_question, form_factor_id = _resolve_form_factor(prompt, answers)
     altitude = _resolve(

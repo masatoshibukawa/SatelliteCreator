@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException
 from pydantic import Field, StringConstraints
 
+from satellitecreator.intake import UnknownQuestionError
 from satellitecreator.schema import Frozen
 from satellitecreator.session import SessionResult, run_session
 
@@ -40,7 +41,7 @@ def create_app() -> FastAPI:
     def session(request: SessionRequest) -> SessionResult:
         try:
             return run_session(request.prompt, request.answers)
-        except ValueError as error:
+        except UnknownQuestionError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
     return application

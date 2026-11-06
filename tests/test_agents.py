@@ -2,7 +2,11 @@ from types import SimpleNamespace
 
 import anthropic
 import pytest
+from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
+from api.main import app
+from satellitecreator import session as session_module
 from satellitecreator.agents import (
     MAX_CALLS_PER_LOOP,
     MAX_CALLS_PER_PROCESS,
@@ -27,7 +31,8 @@ HOT = f"{BASE}。消費電力 20 W"
 class FakeClient:
     """Stands in for the API, so no test spends money."""
 
-    def __init__(self, *moves, error=None):
+    def __init__(self, *moves, error=None, stop_reason="end_turn"):
+        self.stop_reason = stop_reason
         self.moves = list(moves)
         self.error = error
         self.calls = []
@@ -39,7 +44,7 @@ class FakeClient:
             raise self.error
         move = self.moves.pop(0) if len(self.moves) > 1 else self.moves[0]
         usage = SimpleNamespace(input_tokens=100, output_tokens=20)
-        return SimpleNamespace(parsed_output=move, usage=usage)
+        return SimpleNamespace(parsed_output=move, usage=usage, stop_reason=self.stop_reason)
 
 
 def _surface(name: str, ratio: float | None = 0.4) -> ThermalMove:
@@ -86,8 +91,9 @@ def test_request_stays_small_and_cheap():
 
     call = client.calls[0]
     assert call["model"] == "claude-haiku-5-5"
-    assert call["max_tokens"] <= 512
+    assert call["max_tokens"] <= 1024
     assert call["output_config"] == {"effort": "low"}
+    assert call["thinking"] == {"type": "disabled"}
     assert len(call["messages"][0]["content"]) < 500
 
 
@@ -184,6 +190,64 @@ def test_api_failure_falls_back_to_the_rule_agent():
     change = ClaudeThermalAgent(client).review(project, ledger, ())
 
     assert change.message.agent == "熱"
+
+
+def _truncated_json_error():
+    try:
+        ThermalMove.model_validate_json('{"action": "surf')
+    except ValidationError as error:
+        return error
+    raise AssertionError("expected a validation error")
+
+
+def test_truncated_answer_falls_back_to_the_rule_agent():
+    project, ledger = _hot_state()
+    agent = ClaudeThermalAgent(FakeClient(error=_truncated_json_error()))
+
+    change = agent.review(project, ledger, ())
+
+    assert change.message.agent == "熱"
+    assert "ValidationError" in change.message.text
+
+
+def test_truncated_answer_does_not_stop_the_session(monkeypatch):
+    agent = ClaudeThermalAgent(FakeClient(error=_truncated_json_error()))
+    monkeypatch.setattr(session_module, "design_agents", lambda: (agent,))
+
+    response = TestClient(app).post("/session", json={"prompt": HOT})
+
+    assert response.status_code == 200
+    assert response.json()["iteration"]["status"] == "converged"
+
+
+def test_stop_reason_is_recorded():
+    project, ledger = _hot_state()
+    agent = ClaudeThermalAgent(FakeClient(_surface("カプトン"), stop_reason="max_tokens"))
+
+    agent.review(project, ledger, ())
+
+    assert agent.stop_reasons == ("max_tokens",)
+
+
+def test_surface_copied_with_its_numbers_is_still_understood():
+    project, ledger = _hot_state()
+
+    change = ClaudeThermalAgent(FakeClient(_surface("黒塗り(α0.67,ε0.89)"))).review(
+        project, ledger, ()
+    )
+
+    assert change.message.agent == "熱（Claude）"
+    assert change.project.design.surface == "黒塗り"
+
+
+def test_rejected_answer_gives_its_reason_in_the_log():
+    project, ledger = _hot_state()
+    agent = ClaudeThermalAgent(FakeClient(_surface("金メッキ")))
+
+    change = agent.review(project, ledger, ())
+
+    assert "Claude の案を不採用" in change.message.text
+    assert "金メッキ" in change.message.text
 
 
 def test_loop_stops_calling_after_its_budget():
