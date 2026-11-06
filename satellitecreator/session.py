@@ -121,7 +121,9 @@ def run_session(prompt: str, answers: Mapping[str, str]) -> SessionResult:
         questions=intake.questions,
         requirements=project.requirements,
         reviews=_review_views(project),
-        simulations=block_statuses(ledger),
+        simulations=block_statuses(
+            ledger, project.design.attitude if project.design else "free_rotation"
+        ),
         checks=evaluate_checks(ledger),
         satellite=_satellite_view(intake.form_factor),
         scope_findings=check_scope(project.design) if project.design else (),

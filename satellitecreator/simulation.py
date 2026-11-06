@@ -35,6 +35,7 @@ _BLOCK_NOTES = {
 }
 # Stand-in limit: no source for this battery yet, and the inputs are marked provisional.
 _ALLOWABLE_DEPTH_OF_DISCHARGE_RATIO = 0.30
+_SUN_POINTING_THERMAL_NOTE = "太陽指向は熱の計算に未反映で、自由回転のままです"
 _NEEDS_BUS_NOTE = "機器構成が必要です。今は 3U だけ登録しています"
 _WAITING_NOTES = {
     Block.MASS: _NEEDS_BUS_NOTE,
@@ -134,5 +135,13 @@ def _block_status(block: Block, ledger: Ledger) -> BlockStatus:
     return BlockStatus(state=BlockState.DONE, values=values, note=note, **common)
 
 
-def block_statuses(ledger: Ledger) -> tuple[BlockStatus, ...]:
-    return tuple(_block_status(block, ledger) for block in Block)
+def block_statuses(ledger: Ledger, attitude: str = "free_rotation") -> tuple[BlockStatus, ...]:
+    statuses = tuple(_block_status(block, ledger) for block in Block)
+    if attitude != "sun_pointing":
+        return statuses
+    return tuple(
+        item.model_copy(update={"note": f"{item.note} {_SUN_POINTING_THERMAL_NOTE}"})
+        if item.block is Block.THERMAL and item.state is BlockState.DONE
+        else item
+        for item in statuses
+    )

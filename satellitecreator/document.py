@@ -183,7 +183,11 @@ def _system_section(project: Project) -> Section:
         f"軌道傾斜角 {design.orbit.inclination_deg:g} 度",
     )
     choices = (
-        *(("姿勢: 太陽指向（反復設計で選択）",) if design.attitude == "sun_pointing" else ()),
+        *(
+            ("姿勢: 太陽指向（反復設計で選択。熱の計算には未反映）",)
+            if design.attitude == "sun_pointing"
+            else ()
+        ),
         *(
             (f"放熱面: {design.surface}、本体の {design.radiator_ratio:.0%}（反復設計で選択）",)
             if design.surface

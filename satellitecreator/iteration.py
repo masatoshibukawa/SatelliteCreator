@@ -18,6 +18,7 @@ from typing import Protocol
 from satellitecreator.catalog import load_surface_finishes, reference_bus
 from satellitecreator.core.checks import CheckState, evaluate_checks
 from satellitecreator.core.ledger import Ledger
+from satellitecreator.core.registry import load_checks
 from satellitecreator.intake import build_intake
 from satellitecreator.project import Project
 from satellitecreator.requirements import RequirementStatus
@@ -163,7 +164,8 @@ def _failed_checks(ledger: Ledger) -> tuple[str, ...]:
 
 
 def _conflict_question(failed_checks: tuple[str, ...]) -> str:
-    names = "、".join(failed_checks)
+    labels = {item.id: item.label for item in load_checks()}
+    names = "、".join(labels[item] for item in failed_checks)
     return f"自動では解決できません（{names}）。消費電力など、要求を見直せますか？"
 
 
