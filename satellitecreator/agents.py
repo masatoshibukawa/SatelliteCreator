@@ -21,6 +21,7 @@ from pydantic import BaseModel
 
 from satellitecreator.catalog import load_surface_finishes
 from satellitecreator.core.ledger import Ledger
+from satellitecreator.design import SatelliteDesign
 from satellitecreator.intake import build_intake
 from satellitecreator.iteration import (
     DEFAULT_AGENTS,
@@ -29,6 +30,7 @@ from satellitecreator.iteration import (
     DesignAgent,
     DesignChange,
     IterationRecord,
+    PowerAgent,
     ThermalAgent,
     run_design_loop,
     with_design,
@@ -44,8 +46,10 @@ _MAX_REASON_LENGTH = 80
 _AGENT_NAME = "熱（Claude）"
 _SYSTEM = (
     "You are the thermal engineer of a CubeSat design team. Choose one design move that fixes "
-    "the temperature problem. Prefer a surface change for a hot problem and more heater power "
-    "for a cold one. Heater power adds electrical load, so use the least that works. "
+    "the temperature problem. For a hot problem set a radiator patch: `surface` is its material "
+    "and `radiator_ratio` the share of the body it covers, from 0 to 1. For a cold problem raise "
+    "`heater_power_w`. A radiator removes body solar cells and makes the cold case colder, and "
+    "heater power uses energy, so use the least that works. "
     "Write `reason` in Japanese, in one short sentence."
 )
 
@@ -53,8 +57,13 @@ _SYSTEM = (
 class ThermalMove(BaseModel):
     action: Literal["surface", "heater", "stop"]
     surface: str | None
+    radiator_ratio: float | None
     heater_power_w: float | None
     reason: str
+
+
+def _radiator_text(design: SatelliteDesign) -> str:
+    return f"{design.surface} {design.radiator_ratio:.0%}" if design.surface else "なし"
 
 
 def _prompt(project: Project, ledger: Ledger) -> str:
@@ -70,8 +79,8 @@ def _prompt(project: Project, ledger: Ledger) -> str:
     )
     return (
         f"高温余裕 {hot_margin_k:.1f} K、低温余裕 {cold_margin_k:.1f} K。"
-        f"現在の表面 {design.surface or '太陽電池セル'}、ヒータ {design.heater_power_w:g} W"
-        f"（上限 {MAX_HEATER_W:g} W）。選べる表面: {finishes}"
+        f"現在の放熱面 {_radiator_text(design)}、ヒータ {design.heater_power_w:g} W"
+        f"（上限 {MAX_HEATER_W:g} W）。本体は太陽電池セル(α0.92,ε0.8)。放熱面の材料: {finishes}"
     )
 
 
@@ -132,9 +141,13 @@ class ClaudeThermalAgent:
         message = AgentMessage(agent=_AGENT_NAME, text=move.reason[:_MAX_REASON_LENGTH])
         if move.action == "surface":
             names = {item.name for item in load_surface_finishes()}
-            if move.surface not in names:
+            ratio = move.radiator_ratio
+            if move.surface not in names or ratio is None or not 0 < ratio <= 1:
                 return None
-            return DesignChange(message=message, project=with_design(project, surface=move.surface))
+            return DesignChange(
+                message=message,
+                project=with_design(project, surface=move.surface, radiator_ratio=ratio),
+            )
         if move.action == "heater":
             power_w = move.heater_power_w
             if power_w is None or not project.design.heater_power_w < power_w <= MAX_HEATER_W:
@@ -148,7 +161,7 @@ class ClaudeThermalAgent:
 @cache
 def _claude_agents() -> tuple[DesignAgent, ...]:
     client = anthropic.Anthropic(max_retries=1, timeout=_REQUEST_TIMEOUT_S)
-    return (ClaudeThermalAgent(client),)
+    return (ClaudeThermalAgent(client), PowerAgent())
 
 
 def design_agents() -> tuple[DesignAgent, ...]:
@@ -163,7 +176,7 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover
     parser.add_argument("--prompt", required=True)
     args = parser.parse_args(argv)
     agent = ClaudeThermalAgent(anthropic.Anthropic(max_retries=1, timeout=_REQUEST_TIMEOUT_S))
-    result = run_design_loop(build_intake(args.prompt, {}).project, agents=(agent,))
+    result = run_design_loop(build_intake(args.prompt, {}).project, agents=(agent, PowerAgent()))
     for record in result.iterations:
         sys.stdout.write(f"{record.number}: 余裕 {record.temperature_margin_k:.1f} K\n")
         for message in record.messages:

@@ -56,11 +56,18 @@ def test_loop_repairs_a_hot_design():
     assert project_ledger(result.project).value("temperature_margin_k") >= 0
 
 
-def test_loop_changes_the_surface_then_adds_a_heater():
+def test_loop_uses_a_partial_radiator_rather_than_covering_the_whole_body():
     design = _loop(HOT).project.design
 
     assert design.surface is not None
-    assert design.heater_power_w > 0
+    assert 0 < design.radiator_ratio < 1
+    assert design.heater_power_w == 0
+
+
+def test_repaired_design_also_closes_the_energy_budget():
+    ledger = project_ledger(_loop(HOT).project)
+
+    assert ledger.value("orbit_generated_energy_j") >= ledger.value("orbit_consumed_energy_j")
 
 
 def test_every_change_is_recorded_with_the_agent_and_its_reason():
@@ -135,18 +142,38 @@ def test_surface_choice_changes_the_absorptivity_in_the_ledger():
     ledger = project_ledger(project)
 
     finish = surface_finish(project.design.surface)
-    assert ledger.value("surface_absorptivity_ratio") == finish.absorptivity
-
-
-def test_heater_raises_only_the_minimum_power():
-    project = _loop(HOT).project
-
-    ledger = project_ledger(project)
-
-    assert ledger.value("min_consumed_power_w") == pytest.approx(
-        1.229 + project.design.heater_power_w
+    ratio = project.design.radiator_ratio
+    assert ledger.value("surface_absorptivity_ratio") == pytest.approx(
+        0.92 * (1 - ratio) + finish.absorptivity * ratio
     )
+
+
+def test_heater_is_a_separate_quantity_from_the_equipment_power():
+    project = build_intake(HOT, {}).project
+    heated = project.model_copy(
+        update={"design": project.design.model_copy(update={"heater_power_w": 3.0})}
+    )
+
+    ledger = project_ledger(heated)
+
+    assert ledger.value("heater_power_w") == 3.0
+    assert ledger.value("min_consumed_power_w") == pytest.approx(1.229)
     assert ledger.value("max_consumed_power_w") == 20.0
+
+
+def test_cold_design_gets_a_heater():
+    project = build_intake(BASE, {}).project
+    cold = project.model_copy(
+        update={
+            "design": project.design.model_copy(
+                update={"surface": "カプトン", "radiator_ratio": 1.0}
+            )
+        }
+    )
+
+    result = run_design_loop(cold)
+
+    assert result.project.design.heater_power_w > 0
 
 
 def test_session_uses_the_repaired_design_everywhere():
@@ -156,8 +183,7 @@ def test_session_uses_the_repaired_design_everywhere():
     checks = {item.id: item.state for item in result.checks}
     assert checks["temperature_margin_positive"] == "passed"
     text = "\n".join(next(s for s in result.document.sections if s.number == "5.1").lines)
-    assert "表面" in text
-    assert "ヒータ" in text
+    assert "放熱面" in text
 
 
 def test_zero_iterations_is_rejected():

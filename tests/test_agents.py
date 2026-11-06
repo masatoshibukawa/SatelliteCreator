@@ -42,12 +42,16 @@ class FakeClient:
         return SimpleNamespace(parsed_output=move, usage=usage)
 
 
-def _surface(name: str) -> ThermalMove:
-    return ThermalMove(action="surface", surface=name, heater_power_w=None, reason="理由")
+def _surface(name: str, ratio: float | None = 0.4) -> ThermalMove:
+    return ThermalMove(
+        action="surface", surface=name, radiator_ratio=ratio, heater_power_w=None, reason="理由"
+    )
 
 
 def _heater(power_w: float) -> ThermalMove:
-    return ThermalMove(action="heater", surface=None, heater_power_w=power_w, reason="理由")
+    return ThermalMove(
+        action="heater", surface=None, radiator_ratio=None, heater_power_w=power_w, reason="理由"
+    )
 
 
 def _hot_state():
@@ -87,6 +91,21 @@ def test_request_stays_small_and_cheap():
     assert len(call["messages"][0]["content"]) < 500
 
 
+def test_heater_move_is_applied():
+    project = build_intake(BASE, {}).project
+    cold = project.model_copy(
+        update={
+            "design": project.design.model_copy(
+                update={"surface": "カプトン", "radiator_ratio": 1.0}
+            )
+        }
+    )
+
+    change = ClaudeThermalAgent(FakeClient(_heater(3.0))).review(cold, project_ledger(cold), ())
+
+    assert change.project.design.heater_power_w == 3.0
+
+
 @pytest.mark.parametrize(
     "move",
     [
@@ -94,7 +113,11 @@ def test_request_stays_small_and_cheap():
         _surface(None),
         _heater(99.0),
         _heater(None),
-        ThermalMove(action="stop", surface=None, heater_power_w=None, reason="理由"),
+        _surface("カプトン", None),
+        _surface("カプトン", 1.5),
+        ThermalMove(
+            action="stop", surface=None, radiator_ratio=None, heater_power_w=None, reason="理由"
+        ),
         None,
     ],
 )
@@ -163,12 +186,12 @@ def test_token_use_is_counted():
 
 
 def test_loop_converges_with_claude_moves():
-    client = FakeClient(_surface("黒塗り"), _heater(6.0))
+    client = FakeClient(_surface("カプトン", 0.4))
 
     result = run_design_loop(build_intake(HOT, {}).project, agents=(ClaudeThermalAgent(client),))
 
     assert result.status is LoopStatus.CONVERGED
-    assert len(client.calls) == 2
+    assert len(client.calls) == 1
 
 
 def test_claude_is_off_unless_asked_for(monkeypatch):

@@ -26,6 +26,8 @@ from satellitecreator.simulation import project_ledger
 
 MAX_ITERATIONS = 20
 _HEATER_STEP_W = 1.0
+_RADIATOR_STEP_RATIO = 0.1
+_RATIO_TOLERANCE = 1e-9
 MAX_HEATER_W = 10.0
 _NEEDS_BUS_QUESTION = (
     "搭載機器の質量と消費電力を教えてください。今は 3U の機器構成だけ登録しています"
@@ -77,7 +79,7 @@ def with_design(project: Project, **changes: object) -> Project:
 
 
 class ThermalAgent:
-    """Too hot: move to a finish with a lower absorptivity to emissivity ratio. Too cold: heat."""
+    """Too hot: grow a radiator patch on the body. Too cold: add eclipse heater power."""
 
     name = "熱"
 
@@ -88,7 +90,7 @@ class ThermalAgent:
             "orbit_max_temperature_k"
         )
         if hot_margin_k < 0:
-            return self._cooler_surface(project, ledger, hot_margin_k)
+            return self._cooler_surface(project, hot_margin_k)
         cold_margin_k = ledger.value("orbit_min_temperature_k") - ledger.value(
             "allowable_min_temperature_k"
         )
@@ -96,24 +98,22 @@ class ThermalAgent:
             return self._more_heat(project, cold_margin_k)
         return None
 
-    def _cooler_surface(
-        self, project: Project, ledger: Ledger, hot_margin_k: float
-    ) -> DesignChange | None:
-        current_ratio = ledger.value("surface_absorptivity_ratio") / ledger.value(
-            "surface_emissivity_ratio"
-        )
-        cooler = [
-            item
-            for item in load_surface_finishes()
-            if item.absorptivity / item.emissivity < current_ratio
-        ]
-        if not cooler:
+    def _cooler_surface(self, project: Project, hot_margin_k: float) -> DesignChange | None:
+        design = project.design
+        if design.surface is None:
+            finish = min(
+                load_surface_finishes(), key=lambda item: item.absorptivity / item.emissivity
+            )
+            surface, ratio = finish.name, _RADIATOR_STEP_RATIO
+        else:
+            surface, ratio = design.surface, design.radiator_ratio + _RADIATOR_STEP_RATIO
+        if ratio > 1 + _RATIO_TOLERANCE:
             return None
-        choice = max(cooler, key=lambda item: item.absorptivity / item.emissivity)
-        text = f"高温側が {-hot_margin_k:.1f} K 超過。表面を{choice.name}に変更"
+        ratio = min(round(ratio, 2), 1.0)
+        text = f"高温側が {-hot_margin_k:.1f} K 超過。放熱面（{surface}）を本体の {ratio:.0%} に"
         return DesignChange(
             message=AgentMessage(agent=self.name, text=text),
-            project=with_design(project, surface=choice.name),
+            project=with_design(project, surface=surface, radiator_ratio=ratio),
         )
 
     def _more_heat(self, project: Project, cold_margin_k: float) -> DesignChange | None:
@@ -127,7 +127,29 @@ class ThermalAgent:
         )
 
 
-DEFAULT_AGENTS: tuple[DesignAgent, ...] = (ThermalAgent(),)
+class PowerAgent:
+    """Short of energy: point the panels at the Sun. Beyond that the requirement must change."""
+
+    name = "電源"
+
+    def review(
+        self, project: Project, ledger: Ledger, history: tuple[IterationRecord, ...]
+    ) -> DesignChange | None:
+        generated_j = ledger.value("orbit_generated_energy_j")
+        consumed_j = ledger.value("orbit_consumed_energy_j")
+        short_of_energy = generated_j < consumed_j
+        if not short_of_energy:
+            return None
+        if project.design.attitude == "sun_pointing":
+            return None
+        text = f"1 周回で {(consumed_j - generated_j) / 1000:.1f} kJ 不足。太陽指向に変更"
+        return DesignChange(
+            message=AgentMessage(agent=self.name, text=text),
+            project=with_design(project, attitude="sun_pointing"),
+        )
+
+
+DEFAULT_AGENTS: tuple[DesignAgent, ...] = (ThermalAgent(), PowerAgent())
 
 
 def _open_questions(project: Project) -> tuple[str, ...]:
@@ -138,6 +160,11 @@ def _open_questions(project: Project) -> tuple[str, ...]:
 
 def _failed_checks(ledger: Ledger) -> tuple[str, ...]:
     return tuple(item.id for item in evaluate_checks(ledger) if item.state is CheckState.FAILED)
+
+
+def _conflict_question(failed_checks: tuple[str, ...]) -> str:
+    names = "、".join(failed_checks)
+    return f"自動では解決できません（{names}）。消費電力など、要求を見直せますか？"
 
 
 def _first_change(
@@ -180,7 +207,10 @@ def run_design_loop(
             return _finish(LoopStatus.LIMIT_REACHED, current, (*history, record), questions)
         change = _first_change(agents, current, ledger, history)
         if change is None:
-            return _finish(LoopStatus.NO_SOLUTION, current, (*history, record), questions)
+            conflict = _conflict_question(record.failed_checks)
+            return _finish(
+                LoopStatus.NO_SOLUTION, current, (*history, record), (conflict, *questions)
+            )
         current = change.project
         history = (*history, record.model_copy(update={"messages": (change.message,)}))
     raise ValueError("max_iterations must be at least 1")
